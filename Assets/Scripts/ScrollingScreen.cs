@@ -1,0 +1,71 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class ScrollingScreen : MonoBehaviour
+{
+    // Start is called before the first frame update
+    public GameObject wall;
+    public GameObject badguy;
+    public GameObject homingMissile;
+    public Transform topHalfPosition;
+    float heightOfSecondHalf = 0f;
+    void Start()
+    {
+        
+    }
+    public void CreateWall(float width, float height, float rotateSpeed,Vector3 pos)
+    {
+        pos.z = -2f;
+        Transform t = Instantiate(wall, pos, Quaternion.identity).transform;
+        t.localScale = new Vector3(Pooter.basicScale.x * width, Pooter.basicScale.y * height,1f);
+        Wall w = t.GetComponent<Wall>();
+        MainScript.walls.Add(w);
+    }
+    public void CreateEnemy(GameObject prefab, float scaleMultiplier)
+    {
+        //GameObject prefab = badguy;
+        //if(Random.value > 0.5f) { prefab = homingMissile; }
+        Transform t = Instantiate(prefab, GetPointAboveScreen(), Quaternion.identity).transform;
+        t.localScale = Pooter.basicScale * scaleMultiplier;
+        //t.parent = transform;
+        BadGuy b = t.GetComponent<BadGuy>();
+        b.SetupBadGuy();
+        MainScript.badguys.Add(b);
+    }
+    public void UpdateScrollingScreen(float timePassed)
+    {
+        heightOfSecondHalf = topHalfPosition.localPosition.x;
+        float currentScrollSpeed = 1f; //eventually increase it as difficulty increases
+        float distanceToScroll = currentScrollSpeed * timePassed;
+        transform.Translate(Vector3.down * distanceToScroll,Space.World);
+        float tooFar = heightOfSecondHalf * 2f;
+        float yDiff = Camera.main.transform.position.y - transform.position.y;
+        if(yDiff > tooFar) { Vector3 newPos = transform.TransformPoint(topHalfPosition.localPosition); transform.position = newPos; }
+    }
+    public static float GetYPosAboveScreen()
+    {
+        float minDist = Screen.height * 0.0055f;
+        float maxDist = minDist + Pooter.brickLength;
+        //float maxDist = Screen.height * 0.0065f;
+        float minXVal = Screen.width * 0.00485f;
+        float randomPoint = Random.Range(minDist, maxDist);
+        return Camera.main.transform.position.y + randomPoint;
+    }
+    Vector3 GetPointAboveScreen()
+    {
+        float minDist = Screen.height * 0.0055f;
+        float maxDist = minDist + Pooter.brickLength;
+        //float maxDist = Screen.height * 0.0065f;
+        float minXVal = Screen.width * 0.00485f;
+        float randomPoint = Random.Range(minDist, maxDist);
+        float randomXVal = Random.Range(-minXVal, minXVal);
+        Vector3 pos = new Vector3(randomXVal, Camera.main.transform.position.y + randomPoint, 0f);
+        return pos;
+    }
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+}
