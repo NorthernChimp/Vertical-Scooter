@@ -21,7 +21,7 @@ public class CircleBadGuy : MonoBehaviour, BadGuy
     }
     void BadGuy.SetupBadGuy(){ distFromCenter = flame1.localPosition.magnitude; rbody = GetComponent<Rigidbody2D>(); anim = GetComponent<Animator>(); }
     void BadGuy.DestroyBadGuy() { Destroy(gameObject); }
-    void BadGuy.KillBadGuy() { dead = true; directToMove = (transform.position - Camera.main.GetComponent<MainScript>().pooter.transform.position).normalized; endCounter = new Counter(0.75f); anim.Play("damagedCircleBad"); }
+    void BadGuy.KillBadGuy() { dead = true; directToMove = (transform.position - Camera.main.GetComponent<MainScript>().pooter.transform.position).normalized; endCounter = new Counter(0.75f); anim.Play("damagedCircleBad"); MainScript.AddToScore(5); }
     bool BadGuy.GetDead() { return dead; }
     bool BadGuy.GetReadyToDie() { return readyToDie; }
     void BadGuy.UpdateBadGuy(float timePassed)

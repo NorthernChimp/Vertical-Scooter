@@ -30,6 +30,7 @@ public class EnemyBullet : MonoBehaviour , Bullet
     void Bullet.SetupBullet(Vector2 fireDirect)
     {
         thisBullet = this;
+        transform.rotation = Quaternion.LookRotation(Vector3.forward, (Vector3)fireDirect);
        rbody = GetComponent<Rigidbody2D>();
         bulletDirect = fireDirect.normalized;
         MainScript.bullets.Add(this);

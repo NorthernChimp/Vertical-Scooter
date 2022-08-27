@@ -24,7 +24,8 @@ public class HomingMissile : MonoBehaviour, BadGuy
             Vector3 direct = (Pooter.pooterTransform.position - transform.position).normalized;
             p.BounceOff(direct);
             p.extraVelocity += direct * Pooter.brickLength * 84.20f;
-        }        
+        }
+        else { MainScript.AddToScore(1); }        
         readyToDie = true;
     }
     void BadGuy.SetupBadGuy(){ rbody = GetComponent<Rigidbody2D>(); }

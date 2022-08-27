@@ -18,11 +18,15 @@ public class Pooter : MonoBehaviour
     float highestYPoint = 0f;
     float distanceMovedUpward = 0f;
     float nextInstantiationPoint = 0f;
-    float distPerTrigger = 7.5f;
+    float distPerTrigger = 12.5f;
+    public static int currentHealth = 3;
+
     public static Transform pooterTransform;
     public PooterSettings defaultSettings;
     public PooterSettings currentSettings;
     public Vector3 extraVelocity = Vector3.zero;
+    public List<PooterSettingsAffector> settingsAffectors;
+    Counter regenCounter;
     // Start is called before the first frame update
     void Start()
     {
@@ -43,15 +47,36 @@ public class Pooter : MonoBehaviour
                 Vector3 directFromBadGuy = transform.position - collision.transform.position;directFromBadGuy.z = 0f;
                 BounceOff(directFromBadGuy.normalized);
             }
+            DealDamage();
         }
         else
         {
+            
             MainScript.CreateSparkleExplosion(collision.GetContact(0).point);
         }
     }
+    public static void DealDamage()//assumes you're dealing 1 damage
+    {
+        Camera.main.GetComponent<MainScript>().pooter.regenCounter.ResetCounter();
+        if (currentHealth == 0) { }//the game ends...
+        currentHealth--;
+        ClampHealth();
+    }
+    public static void HealDamage()//assumes you're healing 1 damage
+    {
+        Camera.main.GetComponent<MainScript>().pooter.regenCounter.ResetCounter();
+        currentHealth++;
+        ClampHealth();
+    }
+    public static void ClampHealth()
+    {
+        currentHealth = (int)Mathf.Clamp((float)currentHealth, 0f, 3f);
+        //Debug.Log("after clamping " + currentHealth);
+    }
     public void SetupPooter()
     {
-        
+        regenCounter = new Counter(10f);
+        settingsAffectors = new List<PooterSettingsAffector>();
         defaultSettings = new PooterSettings();
         currentSettings = new PooterSettings();
         pooterTransform = transform;
@@ -81,11 +106,41 @@ public class Pooter : MonoBehaviour
         //moveDirect = Vector2.zero;
         moveDirect = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
     }
+    void UpdateCurrentSettings(float timepassed)
+    {
+        currentSettings = PooterSettings.CopySettings(defaultSettings);
+        for(int i = 0; i < settingsAffectors.Count; i++)
+        {
+            PooterSettingsAffector a = settingsAffectors[i];
+            a.endCounter.UpdateCounter(timepassed);if (a.endCounter.hasfinished) { i--; settingsAffectors.Remove(a); } else
+            {
+                switch (a.affectType)
+                {
+                    case PooterSettingsAffectorType.disableControl:
+                        currentSettings.controlled = false;
+                        break;
+                    case PooterSettingsAffectorType.disableBounce:
+                        currentSettings.bounces = false;
+                        break;
+                    case PooterSettingsAffectorType.changeSpeed:
+                        currentSettings.maxSpeed += a.amt;
+                        break;
+                    case PooterSettingsAffectorType.changeAccel:
+                        currentSettings.accelRate += a.amt;
+                        break;
+                        
+                }
+            }
+        }
+    }
     public void UpdatePooter(float timePassed)
     {
+        if (regenCounter.hasfinished) { HealDamage(); } else { regenCounter.UpdateCounter(timePassed); }
+        
+        UpdateCurrentSettings(timePassed);
         jetPackCounter.UpdateCounter(timePassed);
         UpdateMoveDirect();
-        float accelRate = 20f * brickLength;
+        float accelRate = currentSettings.accelRate * brickLength;
         Vector3 moveDirectThisFrame = (moveDirect.normalized * timePassed * accelRate);
         if (Input.GetKeyDown(KeyCode.Space) && jetPackCounter.hasfinished)
         {
@@ -93,7 +148,7 @@ public class Pooter : MonoBehaviour
         }
         
         moveVelocity += moveDirectThisFrame;
-        float maxVelocity = Screen.width * 0.005f;
+        float maxVelocity = currentSettings.maxSpeed * brickLength;
         if(moveVelocity.magnitude > maxVelocity) { moveVelocity = moveVelocity.normalized * maxVelocity; }
         float yBoost = 0f;
         if (!jetPackAnimationCounter.hasfinished)
@@ -118,8 +173,10 @@ public class Pooter : MonoBehaviour
         Vector3 extraVelocityMove = (extraVelocity * timePassed);
         //Debug.Log(extraVelocityMove);
         //rbody.MovePosition(transform.position + (moveVelocity * timePassed) + extraVelocityMove + (Vector3.up * yBoost));
-        Vector3 posToMoveTo = transform.position + (moveVelocity * timePassed) + extraVelocityMove + (Vector3.up * yBoost);
+        //Debug.Log(extraVelocityMove);
+        Vector3 posToMoveTo = transform.position + (moveVelocity * timePassed) + (Vector3.up * yBoost) + extraVelocityMove;
         if(posToMoveTo.y < GetMaxYValue()) { posToMoveTo.y = GetMaxYValue(); }
+        
         rbody.MovePosition(posToMoveTo);
         extraVelocity *= 0.975f;
         Vector3 camPos = Camera.main.transform.position;
@@ -136,7 +193,7 @@ public class Pooter : MonoBehaviour
             distanceMovedUpward += diff;
             if(distanceMovedUpward > nextInstantiationPoint)
             {
-                nextInstantiationPoint += brickLength * distPerTrigger;
+                nextInstantiationPoint += brickLength * (distPerTrigger + (Random.value * Random.Range(-2f,2f)));
                 m.TriggerScrollScreen();
             }
         }
@@ -148,8 +205,11 @@ public class Pooter : MonoBehaviour
     public void BounceOff(Vector3 normal)
     {
         rbody.velocity = Vector2.zero;
-        moveVelocity = Vector3.Reflect(moveVelocity, normal);
-        extraVelocity = Vector3.Reflect(extraVelocity, normal);
+        if (currentSettings.bounces)
+        {
+            moveVelocity = Vector3.Reflect(moveVelocity, normal);
+            extraVelocity = Vector3.Reflect(extraVelocity, normal);
+        }
     }
     float GetMaxYValue() { return (Screen.width * 0.005f) - brickLength * 1f; }
     void CheckIfWeAreWithinLeftRightScreen()
@@ -183,7 +243,34 @@ public class Pooter : MonoBehaviour
 }
 public class PooterSettings
 {
+    public static PooterSettings CopySettings(PooterSettings settingsToCopy)
+    {
+        PooterSettings s = new PooterSettings();
+        s.bounces = settingsToCopy.bounces;
+        s.controlled = settingsToCopy.controlled;
+        s.maxSpeed = settingsToCopy.maxSpeed;
+        return s;
+    }
     public bool controlled = true;
     public bool bounces = true;
-    public float maxSpeed = 1f;
+    public float maxSpeed = 20f;
+    public float accelRate = 40f;
 }
+public class PooterSettingsAffector
+{
+    public Counter endCounter;
+    public PooterSettingsAffectorType affectType;
+    public float amt = 0f;
+    public PooterSettingsAffector(PooterSettingsAffectorType ty, float endTime)
+    {
+        endCounter = new Counter(endTime);
+        affectType = ty;
+    }
+    public PooterSettingsAffector(PooterSettingsAffectorType ty, float amount,float endTime)
+    {
+        amt = amount;
+        endCounter = new Counter(endTime);
+        affectType = ty;
+    }
+}
+public enum PooterSettingsAffectorType { disableBounce,disableControl,changeSpeed,changeAccel}
