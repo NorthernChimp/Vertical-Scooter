@@ -38,7 +38,7 @@ public class CircleBadGuy : MonoBehaviour, BadGuy
         {
             endCounter.UpdateCounter(timePassed);
             if (endCounter.hasfinished) { readyToDie = true; }
-            rbody.MovePosition(transform.position + (directToMove * moveThisFrame * 1.25f));
+            rbody.MovePosition(transform.position + (directToMove * moveThisFrame * 3.25f));
         }
         float rotationSpeed = Mathf.PI * (0.25f + (0.1f * MainScript.currentDifficulty));
         float currentFrameRotation = rotationSpeed * timePassed;

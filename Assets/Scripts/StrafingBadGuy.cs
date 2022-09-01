@@ -35,6 +35,7 @@ public class StrafingBadGuy : MonoBehaviour , BadGuy
     void BadGuy.DestroyBadGuy() { Destroy(gameObject); }//completely destroys the badguy. it has been set to "dead" and we are now in the "cleanup" phase removing the gameobject
     void BadGuy.KillBadGuy() {
         MainScript.AddToScore(3);
+        MainScript.IncreaseScoreMultiplier();
         hasBeenStruck = true;
         anim.Play("damagedAnim");
         directToMove = (transform.position - Camera.main.GetComponent<MainScript>().pooter.transform.position).normalized;
@@ -45,7 +46,7 @@ public class StrafingBadGuy : MonoBehaviour , BadGuy
     {
         anim = GetComponent<Animator>();
         wanderCounter = new Counter(1f);
-        fireCounter = new Counter(2f);
+        fireCounter = new Counter(0.2f);
         currentObjective = new Vector3(Mathf.Sign(Random.value - 0.5f) * Screen.width * 0.0047f,transform.position.y,transform.position.z);
         rbody = GetComponent<Rigidbody2D>();
     }

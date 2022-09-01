@@ -5,6 +5,8 @@ using UnityEngine;
 public class LimitedTimeVisualEffect :MonoBehaviour
 {
     public Counter endCounter;
+    public bool rotates = false;
+    public float rotateSpeed = 0f;
     public void Setup(float timeAlive)
     {
         endCounter = new Counter(timeAlive);

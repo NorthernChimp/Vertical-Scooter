@@ -36,7 +36,7 @@ public class UFOBadGuy : MonoBehaviour , BadGuy
     {
         anim = GetComponent<Animator>();
         wanderCounter = new Counter(1f);
-        fireCounter = new Counter(2f);
+        fireCounter = new Counter(0.65f);
         currentObjective = new Vector3(Mathf.Sign(Random.value - 0.5f) * Screen.width * 0.0027f, transform.position.y, transform.position.z);
         rbody = GetComponent<Rigidbody2D>();
     }

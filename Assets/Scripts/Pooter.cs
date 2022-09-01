@@ -6,7 +6,16 @@ public class Pooter : MonoBehaviour
 {
     Vector2 moveDirect = Vector2.zero;
     Vector3 moveVelocity = Vector2.zero;
-    public SpriteRenderer flameRender;
+
+    public Animator jetPack;
+    Animator pooterAnim;
+
+    public List<SpriteRenderer> renders;
+
+    public bool pressingJump = false;
+
+    public bool inGame = false;
+    public bool alive = true;
     Counter jetPackCounter;
     Counter jetPackAnimationCounter;
     public GameObject brick;
@@ -20,12 +29,14 @@ public class Pooter : MonoBehaviour
     float nextInstantiationPoint = 0f;
     float distPerTrigger = 12.5f;
     public static int currentHealth = 3;
-
+    enum FacingDirect { straight,left,right}
+    FacingDirect directFace = FacingDirect.straight;
     public static Transform pooterTransform;
     public PooterSettings defaultSettings;
     public PooterSettings currentSettings;
     public Vector3 extraVelocity = Vector3.zero;
     public List<PooterSettingsAffector> settingsAffectors;
+    public Collider2D coll;
     Counter regenCounter;
     // Start is called before the first frame update
     void Start()
@@ -44,16 +55,12 @@ public class Pooter : MonoBehaviour
                 //Debug.Log("killing bad guy " + collision.transform.name);
                 b.KillBadGuy();
                 MainScript.CreateExplosion(collision.GetContact(0).point);
+                //MainScript.CreateBigExplosion(collision.GetContact(0).point);
                 Vector3 directFromBadGuy = transform.position - collision.transform.position;directFromBadGuy.z = 0f;
                 BounceOff(directFromBadGuy.normalized);
             }
-            DealDamage();
         }
-        else
-        {
-            
-            MainScript.CreateSparkleExplosion(collision.GetContact(0).point);
-        }
+        else{MainScript.CreateSparkleExplosion(collision.GetContact(0).point);}
     }
     public static void DealDamage()//assumes you're dealing 1 damage
     {
@@ -75,7 +82,10 @@ public class Pooter : MonoBehaviour
     }
     public void SetupPooter()
     {
-        regenCounter = new Counter(10f);
+        pooterAnim = GetComponent<Animator>();
+        pooterAnim.Play("idlePooter");
+        jetPack.speed = 0f;
+        regenCounter = new Counter(5f);
         settingsAffectors = new List<PooterSettingsAffector>();
         defaultSettings = new PooterSettings();
         currentSettings = new PooterSettings();
@@ -87,7 +97,7 @@ public class Pooter : MonoBehaviour
         Vector3 origin = Vector3.left * brickSize * 14.5f;
         float scaleSize = brickSize / 0.32f;
         basicScale = new Vector3(scaleSize, scaleSize, 1f);
-        transform.localScale = basicScale * 2f;
+        transform.localScale = basicScale * 1.25f;
         background.localScale = basicScale * 1.7f;
         ScrollingScreen s = background.GetComponent<ScrollingScreen>();
         Camera.main.orthographicSize = Screen.height * 0.005f;
@@ -98,13 +108,20 @@ public class Pooter : MonoBehaviour
     }
     public void DisableJetPack()
     {
-        flameRender.enabled = false;
+        //flameRender.enabled = false;
+        //jetPack.Play("jetpackAnim");
+        //jetPack.Play("jetpackAnim", 0, 0f);
+        jetPack.speed = 0f;
         jetPackAnimationCounter.UpdateCounter(jetPackAnimationCounter.endTime);
     }
     void UpdateMoveDirect()
     {
         //moveDirect = Vector2.zero;
-        moveDirect = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
+        if (alive) { moveDirect = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")); } else
+        {
+            moveDirect = Vector2.zero;
+        }
+        
     }
     void UpdateCurrentSettings(float timepassed)
     {
@@ -133,50 +150,73 @@ public class Pooter : MonoBehaviour
             }
         }
     }
+    void PooterDies()
+    {
+        alive = false; MainScript.CreateBigExplosion(transform.position).parent = transform; MainScript.gameEnded = true;
+        settingsAffectors = new List<PooterSettingsAffector>();
+        coll.enabled = false;
+        MakeInvisible(false);
+    }
+    void MakeInvisible(bool invis)
+    {
+        for(int i = 0;i < renders.Count; i++)
+        {
+            SpriteRenderer r = renders[i];
+            r.enabled = invis;
+        }
+    }
     public void UpdatePooter(float timePassed)
     {
-        if (regenCounter.hasfinished) { HealDamage(); } else { regenCounter.UpdateCounter(timePassed); }
-        
+        if (regenCounter.hasfinished && alive) { HealDamage(); } else if(alive){ regenCounter.UpdateCounter(timePassed); }
+        if(currentHealth == 0 && alive) { PooterDies(); }
         UpdateCurrentSettings(timePassed);
         jetPackCounter.UpdateCounter(timePassed);
         UpdateMoveDirect();
         float accelRate = currentSettings.accelRate * brickLength;
         Vector3 moveDirectThisFrame = (moveDirect.normalized * timePassed * accelRate);
-        if (Input.GetKeyDown(KeyCode.Space) && jetPackCounter.hasfinished)
+        if (pressingJump && jetPackCounter.hasfinished)
         {
-            ActivateJetpack();
+            if (alive) { ActivateJetpack(); }
         }
+        if(moveDirectThisFrame.x == 0f)
+        {
+            if(directFace != FacingDirect.straight) { pooterAnim.Play("idlePooter"); directFace = FacingDirect.straight; }
+        }else if(moveDirectThisFrame.x > 0f)
+        {
+            if(directFace != FacingDirect.right) { pooterAnim.Play("rightFacingPooter");directFace = FacingDirect.right; }
+        }
+        else
+        {
+            if(directFace != FacingDirect.left) { pooterAnim.Play("leftFacingPooter");directFace = FacingDirect.left; }
+        }
+        if(moveDirect == Vector2.zero)
+        {
+            moveVelocity *= 0.95f;
+        }
+        else { moveVelocity += moveDirectThisFrame; }
         
-        moveVelocity += moveDirectThisFrame;
         float maxVelocity = currentSettings.maxSpeed * brickLength;
-        if(moveVelocity.magnitude > maxVelocity) { moveVelocity = moveVelocity.normalized * maxVelocity; }
+        if(moveVelocity.magnitude > maxVelocity) { moveVelocity = moveVelocity.normalized * maxVelocity;  }
         float yBoost = 0f;
         if (!jetPackAnimationCounter.hasfinished)
         {
             jetPackAnimationCounter.UpdateCounter(timePassed);
-            if (jetPackAnimationCounter.hasfinished) { flameRender.enabled = false; }
+            if (jetPackAnimationCounter.hasfinished) 
+            {
+                jetPack.Play("jetpackAnim", 0, 0f);
+                //jetPack.playbackTime = 0f;
+                jetPack.speed = 0f;
+            }
             else
             {
-                Vector3 packScale = new Vector3(1f, 1f, 1f) * 0.57f;
-                packScale += new Vector3(Mathf.Sin(jetPackAnimationCounter.currentTime * Mathf.PI * 2f) + 1f, Mathf.Cos(jetPackAnimationCounter.currentTime * Mathf.PI * 2f) + 1f, 0f) * 0.85f;
-                flameRender.transform.localScale = packScale;
-                //float yBoost = Mathf.Sin(jetPackAnimationCounter.currentTime * Mathf.PI * 2f) + 1f;
-                //float yBoost = Mathf.Pow(((jetPackAnimationCounter.currentTime - 1f) * 25f) ,2f) * 14.20f ;
-                //Debug.Log("we in here");
-                float boostSpeed = 10.20f;
+                float boostSpeed = 14.20f;
                 yBoost = boostSpeed * timePassed * jetPackAnimationCounter.GetPercentageDone();
-                //moveDirectThisFrame.y += yBoost * timePassed;
             }
         }
-        //transform.Translate((moveVelocity * timePassed) + (Vector3.up * yBoost));
         rbody.velocity = Vector2.zero;
         Vector3 extraVelocityMove = (extraVelocity * timePassed);
-        //Debug.Log(extraVelocityMove);
-        //rbody.MovePosition(transform.position + (moveVelocity * timePassed) + extraVelocityMove + (Vector3.up * yBoost));
-        //Debug.Log(extraVelocityMove);
         Vector3 posToMoveTo = transform.position + (moveVelocity * timePassed) + (Vector3.up * yBoost) + extraVelocityMove;
         if(posToMoveTo.y < GetMaxYValue()) { posToMoveTo.y = GetMaxYValue(); }
-        
         rbody.MovePosition(posToMoveTo);
         extraVelocity *= 0.975f;
         Vector3 camPos = Camera.main.transform.position;
@@ -229,16 +269,23 @@ public class Pooter : MonoBehaviour
             BounceOff(new Vector3(0f, maxHeightDist, 0f));
         }
     }
+    public void Revive()
+    {
+        MakeInvisible(true);
+        alive = true;
+        coll.enabled = true;
+    }
     void ActivateJetpack()
     {
-        flameRender.enabled = true;
+        jetPack.Play("jetpackAnim");jetPack.speed = 1f;
         jetPackCounter.ResetCounter();
         jetPackAnimationCounter.ResetCounter();
     }
     // Update is called once per frame
     void Update()
     {
-        UpdatePooter(Time.deltaTime);
+        //UpdatePooter(Time.deltaTime);
+        pressingJump = Input.GetKey(KeyCode.Space);
     }
 }
 public class PooterSettings
@@ -253,8 +300,8 @@ public class PooterSettings
     }
     public bool controlled = true;
     public bool bounces = true;
-    public float maxSpeed = 20f;
-    public float accelRate = 40f;
+    public float maxSpeed = 15f;
+    public float accelRate = 45f;
 }
 public class PooterSettingsAffector
 {

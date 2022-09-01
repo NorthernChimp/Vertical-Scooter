@@ -55,6 +55,8 @@ public class EnemyBullet : MonoBehaviour , Bullet
             Vector2 directToPooter = p.transform.position - transform.position;
             p.BounceOff(directToPooter.normalized);
             float pushSpeed = 10f;
+            Pooter.DealDamage();
+            MainScript.ResetScoreMultiplier();
             p.AddVelocity(directToPooter.normalized * pushSpeed);
         }
         thisBullet.Impact();
