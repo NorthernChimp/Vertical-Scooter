@@ -6,6 +6,7 @@ using UnityEngine.UI;
 
 public class MainScript : MonoBehaviour
 {
+    public InterstitialAdLoader adLoader;
     static float currentScoreMultiplier = 1f;
     static Counter multiplierCounter;
     static Counter sparkleCounter;
@@ -28,6 +29,7 @@ public class MainScript : MonoBehaviour
     bool playedEnemyLast = true;
     public static bool gameStarted = false;
     public static bool gameEnded = false;
+    bool hasShownAd = false;
     Counter gameOverScreenCounter;
     int healthHeartDisplay = 3;//the health heart display. its the number of health hearts that are full or empty, it reacts to the static int from the pooterscript and updates when the game does;
     // Start is called before the first frame update
@@ -187,6 +189,7 @@ public class MainScript : MonoBehaviour
     }
     public void StartGame()
     {
+        hasShownAd = false;
         pooter.inGame = true;
         gameStarted = true;
         gameEnded = false;
@@ -198,6 +201,11 @@ public class MainScript : MonoBehaviour
         currentScore = 0;
         Vector3 gameOverPos = gameOverScreen.position; gameOverPos.z = 5.5f; gameOverPos += Vector3.up * Screen.height * 0.01f; gameOverScreen.localPosition = gameOverPos;
         gameOverScreenCounter.ResetCounter();
+    }
+    void LoadAdvertisement()
+    {
+        adLoader.LoadAd();
+        adLoader.ShowAd();
     }
     public void PauseGame()
     {
@@ -265,6 +273,6 @@ public class MainScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape) && !gamePaused) { gamePaused = true;mainMenu.OpenMenu(false) ; }
+        if (Input.GetKeyDown(KeyCode.Escape) && !gamePaused) { if (!pooter.alive && !hasShownAd) { hasShownAd = true; LoadAdvertisement(); } gamePaused = true;mainMenu.OpenMenu(false) ; }
     }
 }

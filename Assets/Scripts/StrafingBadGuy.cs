@@ -46,7 +46,7 @@ public class StrafingBadGuy : MonoBehaviour , BadGuy
     {
         anim = GetComponent<Animator>();
         wanderCounter = new Counter(1f);
-        fireCounter = new Counter(0.2f);
+        fireCounter = new Counter(1.15f);
         currentObjective = new Vector3(Mathf.Sign(Random.value - 0.5f) * Screen.width * 0.0047f,transform.position.y,transform.position.z);
         rbody = GetComponent<Rigidbody2D>();
     }

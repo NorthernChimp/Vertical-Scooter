@@ -685,6 +685,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c7222afe4e673cb46a84dc279582b970, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  adLoader: {fileID: 753510562}
   healthHearts:
   - {fileID: 828599607}
   - {fileID: 600050785}
@@ -815,6 +816,68 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!1 &753510559
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 753510561}
+  - component: {fileID: 753510560}
+  - component: {fileID: 753510562}
+  m_Layer: 0
+  m_Name: Ads Manager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &753510560
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 753510559}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 84bbc791ea4d1334f8ba69387b9e7a64, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _androidGameId: 4911235
+  _iOSGameId: 4911234
+  _testMode: 1
+--- !u!4 &753510561
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 753510559}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 5.8357635, y: 63.05646, z: -4.6176395}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 5
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &753510562
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 753510559}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 334538e1ad3f6e54c9b82f9cfef5df78, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _androidAdUnitId: Interstitial_Android
+  _iOsAdUnitId: Interstitial_iOS
 --- !u!1 &828599603
 GameObject:
   m_ObjectHideFlags: 0
