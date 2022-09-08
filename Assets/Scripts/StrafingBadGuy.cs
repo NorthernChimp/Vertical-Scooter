@@ -16,6 +16,7 @@ public class StrafingBadGuy : MonoBehaviour , BadGuy
 {
     Animator anim;
     public Sprite deadFace;
+    Counter debrisCounter;
     Counter wanderCounter;
     bool hasBeenStruck = false;
     Vector3 directToMove = Vector3.zero;
@@ -44,6 +45,7 @@ public class StrafingBadGuy : MonoBehaviour , BadGuy
     bool BadGuy.GetReadyToDie(){return readyToDie;}
     void BadGuy.SetupBadGuy()
     {
+        debrisCounter = new Counter(0.25f);
         anim = GetComponent<Animator>();
         wanderCounter = new Counter(1f);
         fireCounter = new Counter(1.15f);
@@ -73,6 +75,17 @@ public class StrafingBadGuy : MonoBehaviour , BadGuy
             }
             Vector3 directToObjective = (currentObjective - transform.position).normalized;
             rbody.MovePosition(transform.position + (directToObjective * distToMove));
+            if (debrisCounter.hasfinished)
+            {
+                debrisCounter.ResetCounter();
+                int randomInt = (int)Random.Range(2f, 4f);
+                Vector2 moveDirect = new Vector3(currentObjective.x - transform.position.x, 0f, 0f).normalized;
+                for (int i = 0; i < randomInt; i++)
+                {
+                    MainScript.CreateRedDebris(Pooter.GetRandomNearbyPos(transform.position), moveDirect * -0.07f * Pooter.brickLength); ;
+                }
+            }
+            else { debrisCounter.UpdateCounter(timePassed); }
         }
         else
         {

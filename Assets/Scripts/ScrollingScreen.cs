@@ -14,15 +14,15 @@ public class ScrollingScreen : MonoBehaviour
     {
         
     }
-    public void CreateWall(float width, float height, float rotateSpeed,Vector3 pos)
+    public Wall CreateWall(float width, float height, float rotateSpeed,Vector3 pos)
     {
         pos.z = -2f;
         Transform t = Instantiate(wall, pos, Quaternion.identity).transform;
         t.localScale = new Vector3(Pooter.basicScale.x * width, Pooter.basicScale.y * height,1f);
         Wall w = t.GetComponent<Wall>();
-        MainScript.walls.Add(w);
+        return w;
     }
-    public void CreateEnemy(GameObject prefab, float scaleMultiplier)
+    public BadGuy CreateEnemy(GameObject prefab, float scaleMultiplier)
     {
         //GameObject prefab = badguy;
         //if(Random.value > 0.5f) { prefab = homingMissile; }
@@ -31,13 +31,14 @@ public class ScrollingScreen : MonoBehaviour
         //t.parent = transform;
         BadGuy b = t.GetComponent<BadGuy>();
         b.SetupBadGuy();
-        MainScript.badguys.Add(b);
+        return b;
     }
     public void UpdateScrollingScreen(float timePassed)
     {
         heightOfSecondHalf = topHalfPosition.localPosition.x;
         float currentScrollSpeed = 1f; //eventually increase it as difficulty increases
-        float distanceToScroll = currentScrollSpeed * timePassed;
+        float multiplier = 0.87f;
+        float distanceToScroll = currentScrollSpeed * timePassed* multiplier;
         transform.Translate(Vector3.down * distanceToScroll,Space.World);
         float tooFar = heightOfSecondHalf * 2f;
         float yDiff = Camera.main.transform.position.y - transform.position.y;

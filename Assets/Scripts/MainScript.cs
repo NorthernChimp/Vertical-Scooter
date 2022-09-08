@@ -14,8 +14,9 @@ public class MainScript : MonoBehaviour
     public Pooter pooter;
     public ScrollingScreen scrollingScreen;
     public MainMenuScript mainMenu;
-    public static List<Wall> walls;
-    public static List<BadGuy> badguys;
+    List<Wall> walls;
+    List<BadGuy> badguys;
+    List<PowerUp> powerups;
     public static List<Bullet> bullets;
     public static List<LimitedTimeVisualEffect> explosions;
     public static bool gamePaused = false;
@@ -51,6 +52,7 @@ public class MainScript : MonoBehaviour
         pooter.transform.position = new Vector3(0f, 0f, pooter.transform.position.z);
         SetupHealthHearts();
         currentScore = 0;
+        powerups = new List<PowerUp>();
         currentScoreText.text = "Score : " + currentScore.ToString(); 
         currentScoreText.fontSize = Screen.width / 15f;
         currentScoreText.transform.position = new Vector3(Screen.width * 0.75f, Screen.height * 0.95f, 0f);
@@ -100,6 +102,55 @@ public class MainScript : MonoBehaviour
         l.Setup(1f);
         return (l.transform);
     }
+    public static PowerUp CreatePowerup(Vector3 point)
+    {
+        point.z = 1f;
+        GameObject g = (GameObject)Resources.Load("powerup");
+        g.transform.localScale = Pooter.basicScale * 1.25f;
+        PowerUp p = Instantiate(g, point, Quaternion.identity).GetComponent<PowerUp>();
+        if(Random.value > 0.5f){p.SetupPowerup(PowerupType.invulnerabl);}else { p.SetupPowerup(PowerupType.speed); }
+        return p;
+    }
+    public static void CreateGreenDebris(Vector3 point, Vector3 moveDirect)
+    {
+        point.z = 1f;
+        GameObject g = (GameObject)Resources.Load("greenDebris");
+        g.transform.localScale = Pooter.basicScale * 0.375f;
+        LimitedTimeVisualEffect l = Instantiate(g, point, Quaternion.identity).GetComponent<LimitedTimeVisualEffect>();
+        MainScript.explosions.Add(l);
+        l.moves = true;
+        l.moveDirect = moveDirect;
+        //l.rotates = true;
+        //l.rotateSpeed = 35f;
+        l.Setup(1f);
+    }
+    public static void CreateRedDebris(Vector3 point, Vector3 moveDirect)
+    {
+        point.z = 1f;
+        GameObject g = (GameObject)Resources.Load("greenDebris");
+        g.transform.localScale = Pooter.basicScale * 0.185f;
+        LimitedTimeVisualEffect l = Instantiate(g, point, Quaternion.identity).GetComponent<LimitedTimeVisualEffect>();
+        l.GetComponent<SpriteRenderer>().color = Color.red;
+        MainScript.explosions.Add(l);
+        l.moves = true;
+        l.moveDirect = moveDirect;
+        //l.rotates = true;
+        //l.rotateSpeed = 35f;
+        l.Setup(1f);
+    }
+    public static void CreateBlip(Vector3 point,Vector3 moveDirect)
+    {
+        point.z = 0f;
+        GameObject g = (GameObject)Resources.Load("blipSprinkle");
+        g.transform.localScale = Pooter.basicScale * 1f;
+        LimitedTimeVisualEffect l = Instantiate(g, point, Quaternion.identity).GetComponent<LimitedTimeVisualEffect>();
+        MainScript.explosions.Add(l);
+        l.moves = true;
+        l.moveDirect = moveDirect;
+        l.rotates = true;
+        l.rotateSpeed = 35f;
+        l.Setup(1f);
+    }
     public static void CreateExplosion(Vector3 point)
     {
         point.z = -3f;
@@ -146,16 +197,16 @@ public class MainScript : MonoBehaviour
             {
                 case 0:
                     //scrollingScreen.CreateEnemy((GameObject)Resources.Load("Prefabs/UFOBadGuyPrefab"), 2f);
-                    scrollingScreen.CreateEnemy((GameObject)Resources.Load("Prefabs/BadGuyPrefab"), 1.5f);
+                    badguys.Add(scrollingScreen.CreateEnemy((GameObject)Resources.Load("Prefabs/BadGuyPrefab"), 1.5f));
                     break;
                 case 1:
-                    scrollingScreen.CreateEnemy((GameObject)Resources.Load("Prefabs/homingMissile"), 0.85f);
+                    badguys.Add(scrollingScreen.CreateEnemy((GameObject)Resources.Load("Prefabs/homingMissile"), 0.85f));
                     break;
                 case 2:
-                    scrollingScreen.CreateEnemy((GameObject)Resources.Load("Prefabs/CircleBadGuy"), 2f);
+                    badguys.Add(scrollingScreen.CreateEnemy((GameObject)Resources.Load("Prefabs/CircleBadGuy"), 2f));
                     break;
                 case 3:
-                    scrollingScreen.CreateEnemy((GameObject)Resources.Load("Prefabs/UFOBadGuyPrefab"), 2f);
+                    badguys.Add(scrollingScreen.CreateEnemy((GameObject)Resources.Load("Prefabs/UFOBadGuyPrefab"), 2f));
                     //scrollingScreen.CreateEnemy((GameObject)Resources.Load("Prefabs/BadGuy"), 2f);
                     break;
             }
@@ -172,10 +223,21 @@ public class MainScript : MonoBehaviour
             Debug.DrawLine(Vector3.zero, Vector3.left * totalWidth * 0.5f);
             float randomXOffsetMax = (totalWidth * 0.9f) / numberOfWalls;
             //float xOffset = Random.Range(0f, randomXOffsetMax);
+            bool hasAddedPowerup = false;
             for (int i = 0; i < numberOfWalls; i++)
             {
                 Vector3 pos = origin + (Vector3.right * i * distBetween) + (Vector3.right * Random.value * distBetween * 0.9f);
-                scrollingScreen.CreateWall(2f, 2f, 0f, pos);
+                bool buildWall = true; ;
+                if(Random.value > 0.9f && !hasAddedPowerup) { buildWall = false; }
+                if(buildWall)
+                {
+                    walls.Add(scrollingScreen.CreateWall(2f, 2f, 0f, pos));
+                }
+                else 
+                {
+                    hasAddedPowerup = true;
+                    powerups.Add(CreatePowerup(pos));
+                }
             }
         }
     }
@@ -226,9 +288,17 @@ public class MainScript : MonoBehaviour
             pooter.UpdatePooter(timePassed);
             if (currentScore != weThinkScoreIs) { weThinkScoreIs = currentScore; currentScoreText.text = "Score : " + currentScore.ToString(); }
             currentDifficulty += timePassed * 0.025f;
+            for(int i = 0; i < walls.Count; i++) { Wall w = walls[i]; if (w.CleanupThisWall()) { walls.Remove(w);i--;Destroy(w.gameObject); } }
             for (int i = 0; i < badguys.Count; i++) { BadGuy b = badguys[i]; b.UpdateBadGuy(timePassed); if (b.GetReadyToDie()) { badguys.Remove(b); b.DestroyBadGuy(); } }
             for (int i = 0; i < bullets.Count; i++) { Bullet b = bullets[i]; b.UpdateBullet(timePassed); if (b.GetReadyToDie()) { bullets.Remove(b); b.DestroyBullet(); i--; } }
-            for (int i = 0; i < explosions.Count; i++) { LimitedTimeVisualEffect e = explosions[i]; e.endCounter.UpdateCounter(timePassed); if (e.rotates) { e.transform.Rotate(Vector3.forward * e.rotateSpeed * timePassed); } if (e.endCounter.hasfinished) { explosions.Remove(e); i--; e.Destroy(); } }
+            for (int i = 0; i < explosions.Count; i++) 
+            { 
+                LimitedTimeVisualEffect e = explosions[i]; 
+                e.endCounter.UpdateCounter(timePassed); 
+                if (e.rotates) { e.transform.Rotate(Vector3.forward * e.rotateSpeed * timePassed); }
+                if (e.moves) { e.transform.Translate(e.moveDirect); }
+                if (e.endCounter.hasfinished) { explosions.Remove(e); i--; e.Destroy(); } }
+            for(int i = 0; i < powerups.Count; i++) { PowerUp p = powerups[i]; if (p.GetReadyToDie()) { powerups.Remove(p);i--;Destroy(p.gameObject); } }
             if (Pooter.currentHealth != healthHeartDisplay) { SetHealthHeartsToPooter(); }
             if (gameEnded)
             {
@@ -273,6 +343,15 @@ public class MainScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape) && !gamePaused) { if (!pooter.alive && !hasShownAd) { hasShownAd = true; LoadAdvertisement(); } gamePaused = true;mainMenu.OpenMenu(false) ; }
+        if (Input.GetKeyDown(KeyCode.Escape) && !gamePaused) 
+        {
+            //Debug.Log("in here");
+            if (!pooter.alive && !hasShownAd) 
+            {
+                hasShownAd = true; LoadAdvertisement(); 
+            } 
+            gamePaused = true;
+            mainMenu.OpenMenu(false) ; 
+        }
     }
 }

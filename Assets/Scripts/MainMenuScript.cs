@@ -65,15 +65,30 @@ public class MainMenuScript : MonoBehaviour
             title.localScale = originalTitleScale + (0.062f * originalTitleScale * Mathf.Sin(timeOpen));
             foreach(Touch t in Input.touches)
             {
-                //if(t.phase == TouchPhase.Began)
-                if(Input.GetMouseButtonDown(0))
+                if(t.phase == TouchPhase.Began)
                 {
-                    //if (newGameButtonCollider.OverlapPoint(t.position))
-                    if (newGameButtonCollider.OverlapPoint(Input.mousePosition))
+                    Vector2 worldPoint = Camera.main.ScreenToWorldPoint(t.position);
+                    RaycastHit2D hit = Physics2D.Raycast(worldPoint, Vector2.zero);
+
+                    //If something was hit, the RaycastHit2D.collider will not be null.
+
+                    if (hit.collider == newGameButtonCollider)
                     {
+                        MainScript m = Camera.main.GetComponent<MainScript>();
+                        if (!MainScript.gameStarted) { m.StartGame(); }
+                        else
+                        {
+                            m.ClearEverything();
+                            m.StartGame();
+                        }
+
+                        MainScript.gamePaused = false;
                         CloseMenu();
-                        Debug.Log("pooo");
-                        
+                    }
+                    else if (hit.collider == resumeGameButtonCollider)
+                    {
+                        MainScript.gamePaused = false;
+                        CloseMenu();
                     }
                 }
             }

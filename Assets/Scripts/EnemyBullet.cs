@@ -31,7 +31,7 @@ public class EnemyBullet : MonoBehaviour , Bullet
     {
         thisBullet = this;
         transform.rotation = Quaternion.LookRotation(Vector3.forward, (Vector3)fireDirect);
-       rbody = GetComponent<Rigidbody2D>();
+        rbody = GetComponent<Rigidbody2D>();
         bulletDirect = fireDirect.normalized;
         MainScript.bullets.Add(this);
     }
@@ -55,11 +55,25 @@ public class EnemyBullet : MonoBehaviour , Bullet
             Vector2 directToPooter = p.transform.position - transform.position;
             p.BounceOff(directToPooter.normalized);
             float pushSpeed = 10f;
-            Pooter.DealDamage();
+            p.DealDamage();
             MainScript.ResetScoreMultiplier();
             p.AddVelocity(directToPooter.normalized * pushSpeed);
+            CreateFanOfParticles();
         }
+        
         thisBullet.Impact();
+    }
+    void CreateFanOfParticles()
+    {
+        float angleDiff = Mathf.PI / 4f;
+        for (int i = 0; i < 16; i++)
+        {
+            float currentAngleMin = i * angleDiff;
+            float randomVarianceFrom = Random.Range(0f, angleDiff);
+            float currentAngle = currentAngleMin + randomVarianceFrom;
+            Vector3 currentVector = new Vector3(Mathf.Sin(currentAngle), Mathf.Cos(currentAngle), 0f);
+            MainScript.CreateRedDebris(transform.position, currentVector * Pooter.brickLength * 0.420f);
+        }
     }
     // Update is called once per frame
     void Update()

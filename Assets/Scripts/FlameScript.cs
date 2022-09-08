@@ -14,7 +14,7 @@ public class FlameScript : MonoBehaviour
         if(collision.transform.tag == "Player")
         {
             Pooter p = collision.GetComponent<Pooter>();
-            Pooter.DealDamage();
+            p.DealDamage();
             p.DisableJetPack();
             MainScript.ResetScoreMultiplier();
             Vector3 direct = (transform.position - p.transform.position).normalized;
