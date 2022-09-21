@@ -15,6 +15,7 @@ public class MainMenuScript : MonoBehaviour
     public BoxCollider2D newGameButtonCollider;
     public BoxCollider2D resumeGameButtonCollider;
     public TextMeshProUGUI highScoreText;
+    public Counter menuButtonCounter;
     // Start is called before the first frame update
     void Start()
     {
@@ -22,6 +23,7 @@ public class MainMenuScript : MonoBehaviour
     }
     public void SetupMenu()
     {
+        menuButtonCounter = new Counter(0.2f);menuButtonCounter.UpdateCounter(0.2f);
         transform.localScale = Pooter.basicScale * 1.5f;
         originalTitleScale = transform.localScale;
         OpenMenu(true);
@@ -51,6 +53,7 @@ public class MainMenuScript : MonoBehaviour
     public void CloseMenu()
     {
         //Debug.Log("closing menu");
+        menuButtonCounter.ResetCounter();
         menuEnabled = false;
         highScoreText.enabled = false;
         foreach (SpriteRenderer r in renders) { r.enabled = false; }
@@ -58,6 +61,7 @@ public class MainMenuScript : MonoBehaviour
     }
     public void UpdateMenu(float timePassed)
     {
+        if (!menuButtonCounter.hasfinished) { menuButtonCounter.UpdateCounter(timePassed); }
         if (menuEnabled)
         {
             

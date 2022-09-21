@@ -12,8 +12,10 @@ public class Pooter : MonoBehaviour
 
     public List<SpriteRenderer> renders;
 
-    public bool pressingJump = false;
+    public bool hasInputTouch = false;
 
+    public bool pressingJump = false;
+    public bool testingOnPC = true;
     Counter blipCounter;
     Counter greenDebrisCounter;
     public bool inGame = false;
@@ -90,7 +92,7 @@ public class Pooter : MonoBehaviour
             Vector3 currentVector = new Vector3(Mathf.Sin(currentAngle), Mathf.Cos(currentAngle), 0f);
             MainScript.CreateRedDebris(transform.position, currentVector * Pooter.brickLength * 0.420f);
         }
-    }
+    } 
     void CreateFanOfGreenParticles()
     {
         float angleDiff = Mathf.PI / 4f;
@@ -167,11 +169,11 @@ public class Pooter : MonoBehaviour
     }
     void UpdateMoveDirect()
     {
-        /*moveDirect = Vector2.zero;
+        moveDirect = Vector2.zero;
         if (alive) { moveDirect = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")); } else
         {
             moveDirect = Vector2.zero;
-        }*/
+        }
         
     }
     void UpdateCurrentSettings(float timepassed)
@@ -232,7 +234,7 @@ public class Pooter : MonoBehaviour
     public void UpdatePooter(float timePassed)
     {
         float effectCounterMultiplier = 1f + (lastMove.magnitude / (brickLength * 0.15f));
-        if (!jetPackAnimationCounter.hasfinished) { effectCounterMultiplier *= 1.75f; }
+        if (!jetPackAnimationCounter.hasfinished) { effectCounterMultiplier *= 1.25f; }
         if (blipCounter.hasfinished)
         {
             if(lastMove.magnitude > 0.001f)
@@ -248,7 +250,7 @@ public class Pooter : MonoBehaviour
             if(lastMove.magnitude > 0.001f)
             {
                 int amtOfDebris = (int)Random.Range(1f, 3f + lastMove.magnitude);
-                if (!jetPackAnimationCounter.hasfinished) { amtOfDebris += 5; }
+                if (!jetPackAnimationCounter.hasfinished) { amtOfDebris += 2; }
                 for (int i = 0; i < amtOfDebris; i++)
                 {
                     MainScript.CreateGreenDebris(GetRandomNearbyPos(transform.position), lastMove * -1f * 0.5f);
@@ -263,7 +265,7 @@ public class Pooter : MonoBehaviour
         if(currentHealth == 0 && alive) { PooterDies(); }
         UpdateCurrentSettings(timePassed);
         jetPackCounter.UpdateCounter(timePassed);
-        UpdateMoveDirect();
+        if (testingOnPC) { UpdateMoveDirect(); }
         float accelRate = currentSettings.accelRate * brickLength;
         Vector3 moveDirectThisFrame = (moveDirect.normalized * timePassed * accelRate);
         if (pressingJump)
@@ -289,7 +291,7 @@ public class Pooter : MonoBehaviour
         }
         if(moveDirect == Vector2.zero)
         {
-            moveVelocity *= 0.95f;
+            moveVelocity *= 0.85f;
         }
         else { moveVelocity += moveDirectThisFrame; }
         
@@ -390,6 +392,7 @@ public class Pooter : MonoBehaviour
     void DeActivateMoveInterface() { moveInterface.active = false; }
     void TouchControls()
     {
+        hasInputTouch = false;
         moveDirect = Vector2.zero;
         for(int i = 0; i < Input.touchCount; i++)
         {
@@ -397,7 +400,8 @@ public class Pooter : MonoBehaviour
             switch(t.phase)
             {
                 case TouchPhase.Began:
-                    if(t.position.y < Screen.height * 0.35f)
+                    hasInputTouch = true;
+                    if (t.position.y < Screen.height * 0.35f)
                     {
                         //Debug.Log("this register "+ t.position + " and widht " + Screen.width);
                         if (t.position.x < Screen.width * 0.5f)
@@ -423,14 +427,17 @@ public class Pooter : MonoBehaviour
             }
         }
         
-        //pressingJump = Input.GetKey(KeyCode.Space);
+        
     }
     // Update is called once per frame
     void Update()
     {
         //UpdatePooter(Time.deltaTime);
         TouchControls();
-        
+        if (testingOnPC)
+        {
+            pressingJump = Input.GetKey(KeyCode.Space);
+        }
     }
 }
 public class PooterSettings

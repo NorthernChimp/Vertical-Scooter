@@ -37,7 +37,7 @@ public class MainScript : MonoBehaviour
     void Start()
     {
         gameOverScreenCounter = new Counter(1.25f);
-        //Vector3 gameOverPos = gameOverScreen.position;gameOverPos.z = 5f;gameOverPos += Vector3.up * Screen.height * 0.01f; gameOverScreen.localPosition = gameOverPos;
+        Vector3 gameOverPos = gameOverScreen.position;gameOverPos.z = 5f;gameOverPos += Vector3.up * Screen.height * 0.01f; gameOverScreen.localPosition = gameOverPos;
         currentScoreMultiplierText.text = "X " + currentScoreMultiplier.ToString();
         currentScoreMultiplierText.fontSize = Screen.width / 20f;
         currentScoreMultiplierText.transform.position = new Vector3(Screen.width * 0.75f, Screen.height * 0.9f, 0f);
@@ -136,7 +136,7 @@ public class MainScript : MonoBehaviour
         l.moveDirect = moveDirect;
         //l.rotates = true;
         //l.rotateSpeed = 35f;
-        l.Setup(1f);
+        l.Setup(0.35f);
     }
     public static void CreateBlip(Vector3 point,Vector3 moveDirect)
     {
@@ -247,6 +247,7 @@ public class MainScript : MonoBehaviour
         while(walls.Count > 0) { Wall w = walls[0]; Destroy(w.gameObject);walls.RemoveAt(0); }
         while(explosions.Count > 0) { LimitedTimeVisualEffect e = explosions[0]; Destroy(e.gameObject); explosions.RemoveAt(0); }
         while(bullets.Count > 0) { Bullet b = bullets[0];b.DestroyBullet();bullets.RemoveAt(0); }
+        while(powerups.Count > 0) { PowerUp p = powerups[0];powerups.Remove(p);Destroy(p.gameObject); }
         Pooter.currentHealth = 3;SetHealthHeartsToPooter();
     }
     public void StartGame()
@@ -343,15 +344,40 @@ public class MainScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape) && !gamePaused) 
+
+        bool backButton = Input.GetKeyDown(KeyCode.Escape);
+        if (backButton)
+        {
+            if (!mainMenu.menuEnabled) 
+            { 
+                gamePaused = true; 
+                mainMenu.OpenMenu(false); 
+            } else
+            {
+                Application.Quit();
+            }
+        }
+        if ( !gamePaused) 
         {
             //Debug.Log("in here");
-            if (!pooter.alive && !hasShownAd) 
+            if (pooter.alive)
             {
-                hasShownAd = true; LoadAdvertisement(); 
-            } 
-            gamePaused = true;
-            mainMenu.OpenMenu(false) ; 
+                
+            }
+            else
+            {
+                if (pooter.hasInputTouch && gameOverScreenCounter.hasfinished && mainMenu.menuButtonCounter.hasfinished)
+                {
+                    if (!hasShownAd && pooter.hasInputTouch)
+                    {
+                        hasShownAd = true; LoadAdvertisement(); 
+                    }
+                    if (!mainMenu.menuEnabled){ gamePaused = true; mainMenu.OpenMenu(false); }
+                }
+                //if (Input.GetKeyDown(KeyCode.Escape)) { if (mainMenu.enabled) { Application.Quit(); } }
+            }
+            
+            
         }
     }
 }

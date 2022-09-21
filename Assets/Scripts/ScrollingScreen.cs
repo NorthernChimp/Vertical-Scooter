@@ -40,8 +40,9 @@ public class ScrollingScreen : MonoBehaviour
         float multiplier = 0.87f;
         float distanceToScroll = currentScrollSpeed * timePassed* multiplier;
         transform.Translate(Vector3.down * distanceToScroll,Space.World);
-        float tooFar = heightOfSecondHalf * 2f;
+        float tooFar = heightOfSecondHalf * 1f;
         float yDiff = Camera.main.transform.position.y - transform.position.y;
+        Debug.Log(yDiff);
         if(yDiff > tooFar) { Vector3 newPos = transform.TransformPoint(topHalfPosition.localPosition); transform.position = newPos; }
     }
     public static float GetYPosAboveScreen()
