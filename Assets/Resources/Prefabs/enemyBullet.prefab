@@ -101,7 +101,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bulletDirect: {x: 0, y: 0}
   rbody: {fileID: 0}
-  velocity: 14.2
+  velocity: 35
   readyToDie: 0
 --- !u!50 &-1183816535920342103
 Rigidbody2D:
@@ -134,7 +134,7 @@ CircleCollider2D:
   m_Enabled: 1
   m_Density: 1
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_UsedByEffector: 0
   m_UsedByComposite: 0
   m_Offset: {x: 0, y: 0}

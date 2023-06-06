@@ -159,6 +159,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   deadFace: {fileID: 0}
   currentObjective: {x: 0, y: 0, z: 0}
-  velocity: 4.2
+  moveVelocity: 12.5
   rbody: {fileID: 3263060485431304802}
   bulletPrefab: {fileID: 2166321079964086648, guid: 8b0c52bbe9ecdd049bd8672d5dd7d319, type: 3}

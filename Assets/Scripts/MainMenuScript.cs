@@ -3,6 +3,7 @@ using System.Collections;
 using TMPro;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Advertisements;
 
 public class MainMenuScript : MonoBehaviour
 {
@@ -14,8 +15,11 @@ public class MainMenuScript : MonoBehaviour
     public bool menuEnabled = true;
     public BoxCollider2D newGameButtonCollider;
     public BoxCollider2D resumeGameButtonCollider;
+    public BoxCollider2D tutorialButtonCollider;
     public TextMeshProUGUI highScoreText;
     public Counter menuButtonCounter;
+    float width = 0f;
+    float height = 0f;
     // Start is called before the first frame update
     void Start()
     {
@@ -24,29 +28,56 @@ public class MainMenuScript : MonoBehaviour
     public void SetupMenu()
     {
         menuButtonCounter = new Counter(0.2f);menuButtonCounter.UpdateCounter(0.2f);
-        transform.localScale = Pooter.basicScale * 1.5f;
-        originalTitleScale = transform.localScale;
+        width = Screen.width * 0.0085f;//occupies 85% of the width
+        //width = Screen.width * 0.01f;//occupies 1% of the width
+        height = width * 2f;
+        Vector3 scale = new Vector3(width/10.24f , width/ 10.24f, 1f);
+        //Vector3 scale = new Vector3(10.24f/width , 10.24f/width, 1f);
+        //transform.localScale = Pooter.basicScale * 1.5f;
+        transform.localScale = scale * 2f;
+        //originalTitleScale = transform.localScale;
+        //originalTitleScale = scale;
+        originalTitleScale = new Vector3(2f, 2f, 2f);
         OpenMenu(true);
     }
     public void OpenMenu(bool showHighScore)
     {
         menuEnabled = true;
         //Debug.Log("opening menu");
-        int renderCount = renders.Count; 
+        int renderCount = renders.Count;
+        title.localPosition = new Vector3( 0f,2.56f, -1f);
         if (showHighScore) 
         {
             renderCount--;
             highScoreText.fontSize = Screen.width / 20f;
-            highScoreText.transform.position = new Vector3(Screen.width * 0.5f ,(Screen.height * 0.5f) - (Screen.width * 0.25f), 0f);
-            highScoreText.text = "High Score : " + PlayerPrefs.GetInt("HighScore");
+            highScoreText.transform.position = new Vector3(Screen.width * 0.5f ,(Screen.height * 0.5f) - (Screen.width * 0.45f), 0f);
+            highScoreText.text = "High Score : " + PlayerPrefs.GetInt("HighScore", 0).ToString();
+            renders[1].transform.localPosition = new Vector3(0f, 0f, -1f);
+            renders[4].transform.localPosition = new Vector3(0f, -1.28f, -1f);
+            renders[0].enabled = true;
+            renders[1].enabled = true;
+            renders[2].enabled = true;
+            renders[4].enabled = true;
+            resumeGameButtonCollider.transform.localPosition = new Vector3(Screen.width * 1f, 0f, -1f);
             renders[3].enabled = false;
             highScoreText.enabled = true;
         }
-        else { highScoreText.enabled = false; }
+        else 
+        {
+            renders[0].enabled = true;
+            renders[2].enabled = true;
+            renders[1].transform.localPosition = new Vector3(0f, 0f, -1f);
+            renders[3].transform.localPosition = new Vector3(0f, -1.28f, -1f);
+            renders[4].transform.localPosition = new Vector3(Screen.width * 0.5f, -1.28f, -1f);
+            renders[1].enabled = true;
+            renders[4].enabled = false;
+            renders[3].enabled = true;
+            highScoreText.enabled = false; 
+        }
         for(int i =0; i < renderCount; i++)
         {
             SpriteRenderer r = renders[i];
-            r.enabled = true;
+            //r.enabled = true;
         }
         timeOpen = 0f;
     }
@@ -56,13 +87,14 @@ public class MainMenuScript : MonoBehaviour
         menuButtonCounter.ResetCounter();
         menuEnabled = false;
         highScoreText.enabled = false;
+        
         foreach (SpriteRenderer r in renders) { r.enabled = false; }
         //enabled = false;
     }
     public void UpdateMenu(float timePassed)
     {
         if (!menuButtonCounter.hasfinished) { menuButtonCounter.UpdateCounter(timePassed); }
-        if (menuEnabled)
+        if (menuEnabled && !Advertisement.isShowing)
         {
             
             timeOpen += timePassed * Mathf.PI * 1.5f;
@@ -79,26 +111,41 @@ public class MainMenuScript : MonoBehaviour
                     if (hit.collider == newGameButtonCollider)
                     {
                         MainScript m = Camera.main.GetComponent<MainScript>();
-                        if (!MainScript.gameStarted) { m.StartGame(); }
+                        if (!MainScript.gameStarted) { m.StartGame(false); }
                         else
                         {
                             m.ClearEverything();
-                            m.StartGame();
+                            m.StartGame(false);
                         }
 
                         MainScript.gamePaused = false;
                         CloseMenu();
                     }
-                    else if (hit.collider == resumeGameButtonCollider)
+                    else if (hit.collider == resumeGameButtonCollider && renders[3].enabled)
                     {
                         MainScript.gamePaused = false;
+                        MainScript m = Camera.main.GetComponent<MainScript>();
+                        m.EnableHudElements(true);
+                        //Debug.Log("tapped the resume button");
                         CloseMenu();
+                    }else if(hit.collider == tutorialButtonCollider && renders[4].enabled)
+                    {
+                        MainScript m = Camera.main.GetComponent<MainScript>();
+                        m.ClearEverything();
+                        m.StartGame(true);
+                        m.EnableHudElements(false);
+                        MainScript.gamePaused = false;
+                        CloseMenu();
+                        if (!MainScript.gameStarted)
+                        {
+                            
+                        }
                     }
                 }
             }
             if (Input.GetMouseButtonDown(0))
             {
-                Vector2 worldPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                /*Vector2 worldPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
                 RaycastHit2D hit = Physics2D.Raycast(worldPoint, Vector2.zero);
 
                 //If something was hit, the RaycastHit2D.collider will not be null.
@@ -118,7 +165,7 @@ public class MainMenuScript : MonoBehaviour
                 {
                     MainScript.gamePaused = false;
                     CloseMenu();
-                }
+                }*/
             }
         }
         

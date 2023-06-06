@@ -23,6 +23,11 @@ public class Counter
         currentTime = 0f;
         hasfinished = false;
     }
+    public void EndCounter()
+    {
+        hasfinished = true;
+        currentTime = endTime;
+    }
     public void UpdateCounter(float timeToAdd)
     {
         currentTime += timeToAdd;

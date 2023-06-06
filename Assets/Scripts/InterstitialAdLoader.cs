@@ -17,12 +17,11 @@ public class InterstitialAdLoader : MonoBehaviour, IUnityAdsLoadListener, IUnity
             ? _iOsAdUnitId
             : _androidAdUnitId;
     }
-
     // Load content to the Ad Unit:
     public void LoadAd()
     {
         // IMPORTANT! Only load content AFTER initialization (in this example, initialization is handled in a different script).
-        Debug.Log("Loading Ad: " + _adUnitId);
+        //Debug.Log("Loading Ad: " + _adUnitId);
         Advertisement.Load(_adUnitId, this);
     }
 
@@ -30,7 +29,7 @@ public class InterstitialAdLoader : MonoBehaviour, IUnityAdsLoadListener, IUnity
     public void ShowAd()
     {
         // Note that if the ad content wasn't previously loaded, this method will fail
-        Debug.Log("Showing Ad: " + _adUnitId);
+        //Debug.Log("Showing Ad: " + _adUnitId);
         Advertisement.Show(_adUnitId, this);
     }
 
@@ -53,7 +52,7 @@ public class InterstitialAdLoader : MonoBehaviour, IUnityAdsLoadListener, IUnity
     }
 
     public void OnUnityAdsShowStart(string adUnitId) { }
-    public void OnUnityAdsShowClick(string adUnitId) { }
-    public void OnUnityAdsShowComplete(string adUnitId, UnityAdsShowCompletionState showCompletionState) { }
+    public void OnUnityAdsShowClick(string adUnitId) { Debug.Log("in here"); }
+    public void OnUnityAdsShowComplete(string adUnitId, UnityAdsShowCompletionState showCompletionState) {  }
 }
 

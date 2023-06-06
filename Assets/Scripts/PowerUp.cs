@@ -9,6 +9,8 @@ public class PowerUp : MonoBehaviour
     PowerupType powerType = PowerupType.speed;
     public Sprite speedSprite;
     public Sprite invulnerableSprite;
+    public Sprite healthSprite;
+    public Sprite timeSlowSprite;
     void Start()
     {
         
@@ -16,7 +18,10 @@ public class PowerUp : MonoBehaviour
     public void SetupPowerup(PowerupType typeToBecome)
     {
         powerType = typeToBecome;
-        if(typeToBecome == PowerupType.speed) { GetComponent<SpriteRenderer>().sprite = speedSprite; }else if(typeToBecome == PowerupType.invulnerabl) { GetComponent<SpriteRenderer>().sprite = invulnerableSprite; }
+        if(typeToBecome == PowerupType.speed) { GetComponent<SpriteRenderer>().sprite = speedSprite; }else if(typeToBecome == PowerupType.invulnerabl) { GetComponent<SpriteRenderer>().sprite = invulnerableSprite; }else if(typeToBecome == PowerupType.health) { GetComponent<SpriteRenderer>().sprite = healthSprite; }else if (typeToBecome == PowerupType.timeSlow)
+        {
+            GetComponent<SpriteRenderer>().sprite = timeSlowSprite;
+        }
     }
     public bool GetReadyToDie()
     {
@@ -44,13 +49,24 @@ public class PowerUp : MonoBehaviour
         if (collision.tag == "Player")
         {
             Pooter p = collision.transform.GetComponent<Pooter>();
+            MainScript.CreateWhiteCircle(Color.green, transform.position, true, 2.20f, 0.25f);
             if (powerType == PowerupType.speed)
             {
                 p.AddSettingsAffector(new PooterSettingsAffector(PooterSettingsAffectorType.changeSpeed, 15f, 4.2f));
                 p.AddSettingsAffector(new PooterSettingsAffector(PooterSettingsAffectorType.changeAccel, 45f, 4.2f));
+                p.AddSettingsAffector(new PooterSettingsAffector(PooterSettingsAffectorType.changeBounceAmt, -0.795f, 4.2f));
+                
             }else if(powerType == PowerupType.invulnerabl)
             {
                 p.AddSettingsAffector(new PooterSettingsAffector(PooterSettingsAffectorType.invulnerable, 4.2f));
+            }else if(powerType == PowerupType.health)
+            {
+                Pooter.HealDamage();
+            }else if (powerType == PowerupType.timeSlow)
+            {
+                //Debug.Log("we activate here");
+                p.AddSettingsAffector(new PooterSettingsAffector(PooterSettingsAffectorType.changeSpeed, 1.35f, 8f));
+                Camera.main.GetComponent<MainScript>().ActivateSlow();
             }
             
             readyToDie = true;
@@ -63,4 +79,4 @@ public class PowerUp : MonoBehaviour
         
     }
 }
-public enum PowerupType { speed, invulnerabl }
+public enum PowerupType { speed, invulnerabl ,health,timeSlow}

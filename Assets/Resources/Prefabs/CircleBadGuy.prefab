@@ -259,6 +259,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   flame1: {fileID: 5920215298901843525}
   flame2: {fileID: 5920215300251863121}
+  moveSpeed: 10.5
 --- !u!58 &-7876774459406926787
 CircleCollider2D:
   m_ObjectHideFlags: 0

@@ -6,6 +6,10 @@ public class Pooter : MonoBehaviour
 {
     Vector2 moveDirect = Vector2.zero;
     Vector3 moveVelocity = Vector2.zero;
+    Vector3 moveVelocityLastFrame = Vector3.zero;
+    SpriteRenderer protectiveShielding;
+
+    Vector3 currentVelocity = Vector3.zero;
 
     public Animator jetPack;
     Animator pooterAnim;
@@ -14,9 +18,24 @@ public class Pooter : MonoBehaviour
 
     public bool hasInputTouch = false;
 
-    public bool pressingJump = false;
-    public bool testingOnPC = true;
+    bool vulnerable = true;
+
+    bool upwardArrowVisible = false;
+    Transform upwardArrow;
+    SpriteRenderer upwardArrowRender;
+
+
+
+    public static bool pressingJump = false;
+    public bool testingOnPC = false;
+    float timeTouchEnded = 0f;
+    Vector2 lastTouchPos = Vector2.zero;
+    Counter circleCounter;
+    Counter impactDebrisCounter;
     Counter blipCounter;
+    Counter flashRedCounter;
+    bool flashingRed = false;
+    int timesFlashedRed = 0;
     Counter greenDebrisCounter;
     public bool inGame = false;
     public bool alive = true;
@@ -28,8 +47,7 @@ public class Pooter : MonoBehaviour
     public static float brickLength = 0f;
     public Transform background;
     public Rigidbody2D rbody;
-    float highestYPoint = 0f;
-    float distanceMovedUpward = 0f;
+    
     float nextInstantiationPoint = 0f;
     float distPerTrigger = 12.5f;
     public static int currentHealth = 3;
@@ -37,6 +55,7 @@ public class Pooter : MonoBehaviour
     FacingDirect directFace = FacingDirect.straight;
     Vector3 lastMove = Vector3.zero;
     public static Transform pooterTransform;
+    public static Vector3 lastMoveDirect;
     public PooterSettings defaultSettings;
     public PooterSettings currentSettings;
     public Vector3 extraVelocity = Vector3.zero;
@@ -44,6 +63,7 @@ public class Pooter : MonoBehaviour
     public Collider2D coll;
     public float MaxVelocityPossible = 3.5f;
     Counter regenCounter;
+    public static bool hasKilledSomebody = false;
     TouchInterface moveInterface;
 
 
@@ -62,21 +82,45 @@ public class Pooter : MonoBehaviour
             BadGuy b = collision.transform.GetComponent<BadGuy>();
             if (!b.GetDead())
             {
+                hasKilledSomebody = true;
                 //Debug.Log("killing bad guy " + collision.transform.name);
-                b.KillBadGuy();
+                Vector3 directToBadGuy = collision.transform.position - transform.position;
+                b.KillBadGuy(directToBadGuy);
                 MainScript.CreateExplosion(collision.GetContact(0).point);
                 //MainScript.CreateBigExplosion(collision.GetContact(0).point);
-                Vector3 directFromBadGuy = transform.position - collision.transform.position;directFromBadGuy.z = 0f;
+                if (b.DamagesPlayer())
+                {
+
+                }
+                else
+                {
+                    Color c = new Color(0f, 0.5f, 0f, 0.5f);
+                    MainScript.CreateWhiteCircle(c, transform.position, true, 2f, 1f);
+                }
+                
+                Vector3 directFromBadGuy = collision.transform.position - transform.position; directFromBadGuy.z = 0f;
                 BounceOff(directFromBadGuy.normalized);
             }
-            CreateFanOfParticles();
+            if (impactDebrisCounter.hasfinished)
+            {
+                CreateFanOfGreenParticles();
+                impactDebrisCounter.ResetCounter();
+            }
+            
+        }
+        else if(collision.transform.tag == "Wall")
+        {
+            if (impactDebrisCounter.hasfinished)
+            {
+                CreateFanOfGreenParticles();
+                impactDebrisCounter.ResetCounter();
+            }
         }
         else
         {
             if(collision.transform.tag != "EnemyBullet")
             {
                 MainScript.CreateSparkleExplosion(collision.GetContact(0).point);
-                CreateFanOfGreenParticles();
             }
             
         }
@@ -95,6 +139,7 @@ public class Pooter : MonoBehaviour
     } 
     void CreateFanOfGreenParticles()
     {
+        //Debug.Log("createing a fanof green particles at " + Time.time);
         float angleDiff = Mathf.PI / 4f;
         for (int i = 0; i < 16; i++)
         {
@@ -105,16 +150,19 @@ public class Pooter : MonoBehaviour
             MainScript.CreateGreenDebris(transform.position, currentVector * Pooter.brickLength * 0.420f);
         }
     }
-    public void AddSettingsAffector(PooterSettingsAffector aff){settingsAffectors.Add(aff);}
-    public void DealDamage()//assumes you're dealing 1 damage
+    public void AddSettingsAffector(PooterSettingsAffector aff){settingsAffectors.Add(aff);if (aff.affectType == PooterSettingsAffectorType.invulnerable) { protectiveShielding.enabled = true; vulnerable = false; } }
+    public bool DealDamage()//assumes you're dealing 1 damage, returns true if the damage hits
     {
-        if (currentSettings.vulnerable)
+        if (currentSettings.vulnerable && !MainScript.trainingMode)
         {
             Camera.main.GetComponent<MainScript>().pooter.regenCounter.ResetCounter();
             if (currentHealth == 0) { }//the game ends...
             currentHealth--;
             ClampHealth();
+            SetFlashingRed();
+            return true;
         }
+        return false;
     }
     public static void HealDamage()//assumes you're healing 1 damage
     {
@@ -127,10 +175,28 @@ public class Pooter : MonoBehaviour
         currentHealth = (int)Mathf.Clamp((float)currentHealth, 0f, 3f);
         //Debug.Log("after clamping " + currentHealth);
     }
+    void SetFlashingRed()
+    {
+        flashRedCounter.ResetCounter();
+        foreach(SpriteRenderer r in renders)
+        {
+            r.color = Color.red;
+        }
+        flashingRed = true;
+        timesFlashedRed = 0;
+    }
     public void SetupPooter()
     {
+        impactDebrisCounter = new Counter(0.1f);
+        circleCounter = new Counter(1f);
+        flashRedCounter = new Counter(2f);
+        SpriteRenderer[] re = GetComponentsInChildren<SpriteRenderer>();
+        foreach(SpriteRenderer sr in re)
+        {
+            if (sr.name == "protectionShield") { protectiveShielding = sr; sr.enabled = false; }else if(sr.name == "UpwardArrow") { upwardArrow = sr.transform; upwardArrowRender = sr; SetArrowVisibility(false); }
+        }
         greenDebrisCounter = new Counter(0.15f);
-        blipCounter = new Counter(0.5f);
+        blipCounter = new Counter(0.75f);
         blipCounter.ResetCounter();
         greenDebrisCounter.ResetCounter();
         moveInterface = new TouchInterface();
@@ -143,7 +209,7 @@ public class Pooter : MonoBehaviour
         currentSettings = new PooterSettings();
         pooterTransform = transform;
         m = Camera.main.transform.GetComponent<MainScript>();
-        highestYPoint = transform.position.y;
+        
         float brickSize = (Screen.width / 30f) * 0.01f;//a brick should be one thirtieth of the screen width
         brickLength = brickSize;
         Vector3 origin = Vector3.left * brickSize * 14.5f;
@@ -151,13 +217,18 @@ public class Pooter : MonoBehaviour
         basicScale = new Vector3(scaleSize, scaleSize, 1f);
         transform.localScale = basicScale * 1.25f;
         background.localScale = basicScale * 1.7f;
+        upwardArrow.SetParent(null);
+        upwardArrow.localScale = basicScale * 2f;
         ScrollingScreen s = background.GetComponent<ScrollingScreen>();
         Camera.main.orthographicSize = Screen.height * 0.005f;
         jetPackCounter = new Counter(1f);
+        jetPackCounter.UpdateCounter(jetPackCounter.endTime);
         jetPackAnimationCounter = new Counter(1f);
         jetPackAnimationCounter.hasfinished = true;
-        nextInstantiationPoint = highestYPoint + (distPerTrigger * brickLength);
+        
         MaxVelocityPossible *= brickLength;
+        
+        rbody.velocity = Vector2.zero;
     }
     public void DisableJetPack()
     {
@@ -182,7 +253,7 @@ public class Pooter : MonoBehaviour
         for(int i = 0; i < settingsAffectors.Count; i++)
         {
             PooterSettingsAffector a = settingsAffectors[i];
-            a.endCounter.UpdateCounter(timepassed);if (a.endCounter.hasfinished) { i--; settingsAffectors.Remove(a); } else
+            a.endCounter.UpdateCounter(timepassed);if (a.endCounter.hasfinished) { i--;  settingsAffectors.Remove(a); } else
             {
                 switch (a.affectType)
                 {
@@ -193,6 +264,7 @@ public class Pooter : MonoBehaviour
                         currentSettings.bounces = false;
                         break;
                     case PooterSettingsAffectorType.changeSpeed:
+                        currentSettings.speedUp = true;
                         currentSettings.maxSpeed += a.amt;
                         break;
                     case PooterSettingsAffectorType.changeAccel:
@@ -201,14 +273,27 @@ public class Pooter : MonoBehaviour
                     case PooterSettingsAffectorType.invulnerable:
                         currentSettings.vulnerable = false;
                         break;
-                        
+                    case PooterSettingsAffectorType.changeTime:
+                        currentSettings.timeChange = a.amt;
+                        break;
+                    case PooterSettingsAffectorType.changeBounceAmt:
+                        currentSettings.bounceAmt += a.amt;
+                        break;
                 }
             }
         }
+        if(currentSettings.vulnerable != vulnerable) { protectiveShielding.enabled = !currentSettings.vulnerable; vulnerable = currentSettings.vulnerable; }
     }
     void PooterDies()
     {
-        alive = false; MainScript.CreateBigExplosion(transform.position).parent = transform; MainScript.gameEnded = true;
+        int i = PlayerPrefs.GetInt("HighScore");
+        //Debug.Log("current high score is " + i);
+        if (MainScript.currentScore > i) { PlayerPrefs.SetInt("HighScore", MainScript.currentScore); }
+        //Debug.Log("now current high score is " + PlayerPrefs.GetInt("HighScore"));
+        alive = false; 
+        MainScript.CreateBigExplosion(transform.position).parent = transform; 
+        //MainScript.CreateBigRedExplosion(transform.position).parent = transform; 
+        MainScript.gameEnded = true;
         settingsAffectors = new List<PooterSettingsAffector>();
         coll.enabled = false;
         MakeInvisible(false);
@@ -233,14 +318,76 @@ public class Pooter : MonoBehaviour
     }
     public void UpdatePooter(float timePassed)
     {
-        float effectCounterMultiplier = 1f + (lastMove.magnitude / (brickLength * 0.15f));
-        if (!jetPackAnimationCounter.hasfinished) { effectCounterMultiplier *= 1.25f; }
+        impactDebrisCounter.UpdateCounter(timePassed);
+        //float effectCounterMultiplier = 1f + (lastMove.magnitude / (brickLength * 0.15f));
+        float effectCounterMultiplier = 1f;
+        //Debug.Log(lastMove);
+        if (flashingRed)
+        {
+            if (!flashRedCounter.hasfinished)
+            {
+                flashRedCounter.UpdateCounter(timePassed);
+                float percent = flashRedCounter.GetPercentageDone();
+                if (percent >= timesFlashedRed * 0.085f)
+                {
+                    timesFlashedRed++;
+                    bool turningRed = timesFlashedRed % 2 > 0f;
+
+                    for (int i = 0; i < renders.Count; i++)
+                    {
+                        SpriteRenderer r = renders[i];
+                        if (turningRed)
+                        {
+                            r.color = Color.red;
+                        }
+                        else { r.color = Color.white; }
+                    }
+
+                }
+            }
+            else
+            {
+                flashingRed = false;
+                for (int i = 0; i < renders.Count; i++)
+                {
+                    SpriteRenderer r = renders[i];
+                    r.color = Color.white;
+                }
+            }
+        }
+        
+        if (!jetPackAnimationCounter.hasfinished) { effectCounterMultiplier *= 1.5f; }
+        float speedMultiplier = moveVelocity.magnitude / (brickLength * 6f);
+        speedMultiplier = Mathf.Clamp(speedMultiplier, 1f, 8f);
+        if (flashingRed) { speedMultiplier *= 1.5f; } else if (!jetPackAnimationCounter.hasfinished) { speedMultiplier *= 1f + (1.5f * jetPackAnimationCounter.GetPercentageDone()); }else if (currentSettings.speedUp) { speedMultiplier *= 1.5f; }
+        //Debug.Log(speedMultiplier);
+        if (circleCounter.hasfinished)
+        {
+            Vector3 pos = transform.position + (moveVelocity.normalized * -1f * brickLength * speedMultiplier * 0.45f);
+            Color c = new Color(0.75f, 0.75f, 0.75f, 0.15f);//normal grayish color
+            if (flashingRed)
+            {
+                c = new Color(0.85f, 0f, 0f, 0.65f);
+            }else if (!jetPackAnimationCounter.hasfinished)
+            {
+                c = new Color(0f, 0f, 0.6f, 0.525f);
+            }else if (currentSettings.speedUp)
+            {
+                speedMultiplier *= 0.825f;
+                c = new Color(0f, 0.454f, 0f, 0.454f);
+                
+            }
+            MainScript.CreateWhiteCircle(c, pos, true,speedMultiplier * 0.2f,0.125f * speedMultiplier);
+            circleCounter.ResetCounter();
+        }
+        circleCounter.UpdateCounter(timePassed * speedMultiplier);
         if (blipCounter.hasfinished)
         {
-            if(lastMove.magnitude > 0.001f)
+            
+            
+            if(lastMove.magnitude > 0.5f * brickLength)
             {
                 MainScript.CreateBlip(GetRandomNearbyPos(transform.position), lastMove * -1f * 0.35f);
-                
             }
             blipCounter.ResetCounter();
         }
@@ -250,12 +397,19 @@ public class Pooter : MonoBehaviour
             if(lastMove.magnitude > 0.001f)
             {
                 int amtOfDebris = (int)Random.Range(1f, 3f + lastMove.magnitude);
+                if (!jetPackCounter.hasfinished) 
+                { 
+                    for(int i = 0; i < amtOfDebris; i++)
+                    {
+                        MainScript.CreateBlueDebris(GetRandomNearbyPos(transform.position), lastMove * -1f * 0.85f);
+                    }
+                    amtOfDebris *= 2;  
+                }
                 if (!jetPackAnimationCounter.hasfinished) { amtOfDebris += 2; }
                 for (int i = 0; i < amtOfDebris; i++)
                 {
                     MainScript.CreateGreenDebris(GetRandomNearbyPos(transform.position), lastMove * -1f * 0.5f);
                 }
-                
             }
             greenDebrisCounter.ResetCounter();
         }
@@ -264,8 +418,9 @@ public class Pooter : MonoBehaviour
         if (regenCounter.hasfinished && alive) { HealDamage(); } else if(alive){ regenCounter.UpdateCounter(timePassed); }
         if(currentHealth == 0 && alive) { PooterDies(); }
         UpdateCurrentSettings(timePassed);
+        timePassed *= currentSettings.timeChange;
         jetPackCounter.UpdateCounter(timePassed);
-        if (testingOnPC) { UpdateMoveDirect(); }
+        //if (testingOnPC) { UpdateMoveDirect(); }
         float accelRate = currentSettings.accelRate * brickLength;
         Vector3 moveDirectThisFrame = (moveDirect.normalized * timePassed * accelRate);
         if (pressingJump)
@@ -276,24 +431,32 @@ public class Pooter : MonoBehaviour
             }
             pressingJump = false; 
         }
-            
-        
-        if(moveDirectThisFrame.x == 0f)
+        if (!jetPackCounter.hasfinished)
         {
-            if(directFace != FacingDirect.straight) { pooterAnim.Play("idlePooter"); directFace = FacingDirect.straight; }
-        }else if(moveDirectThisFrame.x > 0f)
-        {
-            if(directFace != FacingDirect.right) { pooterAnim.Play("rightFacingPooter");directFace = FacingDirect.right; }
+            pooterAnim.Play("fistUpPooter");
         }
         else
         {
-            if(directFace != FacingDirect.left) { pooterAnim.Play("leftFacingPooter");directFace = FacingDirect.left; }
+            if (moveDirectThisFrame.x == 0f)
+            {
+                if (directFace != FacingDirect.straight) { pooterAnim.Play("idlePooter"); directFace = FacingDirect.straight; }
+            }
+            else if (moveDirectThisFrame.x > 0f)
+            {
+                if (directFace != FacingDirect.right) { pooterAnim.Play("rightFacingPooter"); directFace = FacingDirect.right; }
+            }
+            else
+            {
+                if (directFace != FacingDirect.left) { pooterAnim.Play("leftFacingPooter"); directFace = FacingDirect.left; }
+            }
         }
-        if(moveDirect == Vector2.zero)
+        
+        
+        if (moveDirect == Vector2.zero )
         {
-            moveVelocity *= 0.85f;
+            moveVelocity *= 0.95f;
         }
-        else { moveVelocity += moveDirectThisFrame; }
+        else { if (Vector3.Dot(moveDirect.normalized, moveVelocity.normalized) < 0f) {} moveVelocity += moveDirectThisFrame; }
         
         float maxVelocity = currentSettings.maxSpeed * brickLength;
         if(moveVelocity.magnitude > maxVelocity) { moveVelocity = moveVelocity.normalized * maxVelocity;  }
@@ -314,32 +477,44 @@ public class Pooter : MonoBehaviour
             }
         }
         rbody.velocity = Vector2.zero;
-        Vector3 extraVelocityMove = (extraVelocity * timePassed);
-        Vector3 moveVelocityFrameMoved = moveVelocity * timePassed; if(moveVelocityFrameMoved.magnitude > MaxVelocityPossible) { moveVelocityFrameMoved = moveVelocityFrameMoved.normalized * MaxVelocityPossible; }
-        Vector3 posToMoveTo = transform.position + (moveVelocity * timePassed) + (Vector3.up * yBoost);// + extraVelocityMove;
+        //Vector3 extraVelocityMove = (extraVelocity * timePassed);
+        //Vector3 moveVelocityFrameMoved = moveVelocity * timePassed; //if(moveVelocityFrameMoved.magnitude > MaxVelocityPossible) { moveVelocityFrameMoved = moveVelocityFrameMoved.normalized * MaxVelocityPossible; }
+        Vector3 posToMoveTo = transform.position + ((moveVelocity * timePassed) + (Vector3.up * yBoost) );// + extraVelocityMove;
         if(posToMoveTo.y < GetMaxYValue()) { posToMoveTo.y = GetMaxYValue(); }
-        lastMove = posToMoveTo - transform.position;
+        //Debug.Log((moveVelocity * timePassed) + (Vector3.up * yBoost));
+        //Debug.Log("pos to move to is " + posToMoveTo + " and transform pos is " + transform.position);
+        lastMove = ((moveVelocity * timePassed) + (Vector3.up * yBoost));
+        //Debug.Log("last move " + lastMove);
+        //lastMoveDirect = posToMoveTo - transform.position;lastMoveDirect.z = 0f;
+        lastMoveDirect = moveDirect;
         rbody.MovePosition(posToMoveTo);
-        
         extraVelocity *= 0.975f;
-        Vector3 camPos = Camera.main.transform.position;
+        Vector3 camPos = Camera.main.transform.position; //camPos.y = transform.position.y;
+        //Camera.main.transform.position = camPos;
         float extraDistFromCenter = 10f * brickLength;
         float yDiff = camPos.y - transform.position.y - (extraDistFromCenter);
         if(yDiff > 0f) { yDiff = 0f; }
         CheckIfWeAreWithinLeftRightScreen();
         Camera.main.transform.Translate(Vector3.down * yDiff * timePassed * 4.20f);
-        if(transform.position.y > highestYPoint) 
+        UpdateArrow();
+    }
+    void SetArrowVisibility(bool b) { upwardArrowVisible = b;upwardArrowRender.enabled = b; }
+    void UpdateArrow()
+    {
+        if(moveDirect == Vector2.zero)
         {
-            float prevHighest = highestYPoint;
-            highestYPoint = transform.position.y;
-            float diff = highestYPoint - prevHighest;
-            distanceMovedUpward += diff;
-            if(distanceMovedUpward > nextInstantiationPoint)
-            {
-                nextInstantiationPoint += brickLength * (distPerTrigger + (Random.value * Random.Range(-2f,2f)));
-                m.TriggerScrollScreen();
-            }
+            if (upwardArrowVisible) { SetArrowVisibility(false); }
         }
+        else 
+        {
+            if (!upwardArrowVisible) { SetArrowVisibility(true); }
+            
+            float multiplier = moveVelocity.magnitude / (brickLength * 8f);
+            Vector3 newLocalPos = moveDirect.normalized * (brickLength * (1.5f + multiplier)); newLocalPos.z = -5f; newLocalPos += transform.position;
+            upwardArrow.position = newLocalPos;
+            upwardArrow.rotation = Quaternion.LookRotation(Vector3.forward, moveDirect.normalized);
+        }
+        
     }
     public void AddVelocity(Vector3 velocityToAdd)
     {
@@ -347,11 +522,14 @@ public class Pooter : MonoBehaviour
     }
     public void BounceOff(Vector3 normal)
     {
+        normal.z = 0f;
         rbody.velocity = Vector2.zero;
         if (currentSettings.bounces)
         {
-            moveVelocity = Vector3.Reflect(moveVelocity, normal);
-            extraVelocity = Vector3.Reflect(extraVelocity, normal);
+            //Debug.Log("bounces " + normal);
+            float bounceAmt = 0.925f;
+            moveVelocity = Vector3.Reflect(moveVelocity, normal) * bounceAmt;
+            extraVelocity = Vector3.Reflect(extraVelocity, normal) * bounceAmt;
         }
     }
     float GetMaxYValue() { return (Screen.width * 0.005f) - brickLength * 1f; }
@@ -362,72 +540,107 @@ public class Pooter : MonoBehaviour
         { 
             Vector3 pos = transform.position;pos.x = maxDist * Mathf.Sign(transform.position.x);
             transform.position = pos;
-            BounceOff(new Vector3(Mathf.Sign(transform.position.x) * 1f, 0f, 0f)); 
+            BounceOff(new Vector3(Mathf.Sign(transform.position.x) * 1f, 0f, 0f).normalized); 
         }
         float maxHeightDist = Camera.main.transform.position.y - Screen.height* 0.005f; maxHeightDist += brickLength;
         if ((transform.position.y) < maxHeightDist)
         {
             Vector3 pos = transform.position; pos.y = maxHeightDist;
             transform.position = pos;
-            BounceOff(new Vector3(0f, maxHeightDist, 0f));
+            BounceOff(new Vector3(0f, maxHeightDist, 0f).normalized);
         }
     }
     public void Revive()
     {
+        rbody.velocity = Vector2.zero;
         MakeInvisible(true);
         alive = true;
         //Debug.Log("reviving");
+        moveDirect = Vector2.zero;
         coll.enabled = true;
     }
     void ActivateJetpack()
     {
+
+        MainScript.CreateWhiteCircle(Color.green, transform.position, true, 2f, 0.75f);
         jetPack.Play("jetpackAnim");jetPack.speed = 1f;
         jetPackCounter.ResetCounter();
         jetPackAnimationCounter.ResetCounter();
     }
     void ActivateMoveInterface(int finger)
     {
+        
         moveInterface.active = true; moveInterface.touchId = finger; moveInterface.currentDirect = Vector2.zero;
     }
-    void DeActivateMoveInterface() { moveInterface.active = false; }
+    void DeActivateMoveInterface() {  moveInterface.active = false; }
     void TouchControls()
     {
         hasInputTouch = false;
         moveDirect = Vector2.zero;
-        for(int i = 0; i < Input.touchCount; i++)
+        if (alive)
         {
-            Touch t = Input.GetTouch(i);
-            switch(t.phase)
+            for (int i = 0; i < Input.touchCount; i++)
             {
-                case TouchPhase.Began:
-                    hasInputTouch = true;
-                    if (t.position.y < Screen.height * 0.35f)
-                    {
+                Touch t = Input.GetTouch(i);
+                switch (t.phase)
+                {
+                    case TouchPhase.Began:
+                        hasInputTouch = true;
                         //Debug.Log("this register "+ t.position + " and widht " + Screen.width);
-                        if (t.position.x < Screen.width * 0.5f)
+                        if (!moveInterface.active)
                         {
-                            if (!moveInterface.active) { ActivateMoveInterface(t.fingerId); }
+                            if (Screen.width * 0.05f < t.position.x && t.position.x < Screen.width * 0.95f)
+                            {
+                                if (Screen.height * 0.05f < t.position.y && t.position.y < Screen.height * 0.95f)
+                                {
+                                    ActivateMoveInterface(t.fingerId);
+                                    if (Time.time - timeTouchEnded <= 0.15f)
+                                    {
+                                        Vector2 differenceBetweenThisTouchAndLast = t.position - lastTouchPos;
+                                        float dist = differenceBetweenThisTouchAndLast.magnitude;
+                                        if (dist <= Screen.width * 0.1f) { pressingJump = true; }
+                                    }
+                                }
+                            }
                         }
-                        else
+                        break;
+                    case TouchPhase.Moved:
+                    case TouchPhase.Stationary:
+                        if (moveInterface.active) 
                         {
-                            
-                            pressingJump = true;
+
+                            if (t.fingerId == moveInterface.touchId) 
+                            {
+                                moveInterface.UpdateInterface(t.deltaPosition);
+                                float totalDist = moveInterface.currentDirect.magnitude;
+                                float maxDist = Screen.width * 0.15f;
+                                if(totalDist > maxDist)
+                                {
+                                    moveDirect = moveInterface.currentDirect.normalized;
+                                }
+                                else
+                                {
+                                    float percent = totalDist / maxDist;
+                                    moveDirect = moveInterface.currentDirect.normalized * percent;
+                                }
+                                moveDirect = moveInterface.currentDirect.normalized; 
+                            } 
                         }
-                    }
-                    break;
-                case TouchPhase.Moved:
-                case TouchPhase.Stationary:
-                    if (moveInterface.active) { if (t.fingerId == moveInterface.touchId) { moveInterface.UpdateInterface(t.deltaPosition); moveDirect = moveInterface.currentDirect.normalized; } }
-                    
-                    break;
-                case TouchPhase.Ended:
-                case TouchPhase.Canceled:
-                    if (moveInterface.active){   if (t.fingerId == moveInterface.touchId) { DeActivateMoveInterface(); }}
-                    break;
+                        //Debug.Log("we're in here");
+                        break;
+                    case TouchPhase.Ended:
+                    case TouchPhase.Canceled:
+                        if (moveInterface.active) { if (t.fingerId == moveInterface.touchId) { DeActivateMoveInterface(); timeTouchEnded = Time.time; lastTouchPos = t.position; } }
+                        break;
+                }
             }
         }
         
-        
+        //if(moveDirect.magnitude > Screen.width * 0.15f) { moveDirect *= 0.925f; }
+        if (testingOnPC)
+        {
+            if (Input.anyKeyDown) { hasInputTouch = true; }
+        }
     }
     // Update is called once per frame
     void Update()
@@ -436,7 +649,7 @@ public class Pooter : MonoBehaviour
         TouchControls();
         if (testingOnPC)
         {
-            pressingJump = Input.GetKey(KeyCode.Space);
+            //pressingJump = Input.GetKey(KeyCode.Space);
         }
     }
 }
@@ -452,9 +665,12 @@ public class PooterSettings
     }
     public bool vulnerable = true;
     public bool controlled = true;
+    public bool speedUp = false;
     public bool bounces = true;
-    public float maxSpeed = 25f;
-    public float accelRate = 65f;
+    public float bounceAmt = 0.875f;
+    public float maxSpeed = 30.5f;
+    public float accelRate = 105f;
+    public float timeChange = 1f;
 }
 public class PooterSettingsAffector
 {
@@ -480,12 +696,14 @@ class TouchInterface
     public bool active = false;
     public void UpdateInterface(Vector2 delta)
     {
-        currentDirect += delta;
-        if (currentDirect.magnitude > Pooter.brickLength * 0.5f)
+        currentDirect += delta * 0.01f;
+        if (currentDirect.magnitude > Pooter.brickLength * 2.5f)
         {
-            currentDirect *= 0.95f;
+            currentDirect *= 0.985f;
             
         }
+        //Debug.Log("dir " + currentDirect);
     }
+    
 }
-public enum PooterSettingsAffectorType { disableBounce,disableControl,changeSpeed,changeAccel,invulnerable}
+public enum PooterSettingsAffectorType { disableBounce,disableControl,changeSpeed,changeAccel,invulnerable,changeTime,changeBounceAmt}

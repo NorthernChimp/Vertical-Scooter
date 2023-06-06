@@ -6,9 +6,15 @@ public class Wall : MonoBehaviour
 {
     // Start is called before the first frame update
     public BoxCollider2D coll;
+    public List<Sprite> possibleSprites;
     void Start()
     {
-        
+        int randomInt = (int)(Random.value * possibleSprites.Count);
+        GetComponent<SpriteRenderer>().sprite = possibleSprites[randomInt];
+        int randomDirectInt = (int)(Random.value * 4f);
+        float randomAngle = Mathf.PI * 0.5f * randomDirectInt;
+        Vector3 upDirect = new Vector3(Mathf.Sin(randomAngle), Mathf.Cos(randomAngle), 0f);
+        transform.rotation = Quaternion.LookRotation(Vector3.forward, upDirect);
     }
     public bool CleanupThisWall()//returns true if its ready for cleanup
     {
@@ -30,8 +36,9 @@ public class Wall : MonoBehaviour
             float clampedY = Mathf.Clamp(directToPlayer.y, -halfHeight, halfHeight);
             //float clampedY = Mathf.Clamp(p.transform.position.y, transform.position.y -halfHeight, transform.position.y + halfHeight);
             Vector3 clampedPos = new Vector3(clampedX, clampedY, 0f);
-            Vector3 clampedPosWorld = clampedPos + transform.position;
-            Vector3 normal = p.transform.position - (transform.position + clampedPos);
+            //Vector3 clampedPosWorld = clampedPos + transform.position;
+            //Vector3 normal = p.transform.position - (transform.position + clampedPos);
+            Vector3 normal = clampedPos - transform.position;normal.z = 0f;
             p.BounceOff(normal.normalized);
             p.rbody.velocity = Vector2.zero;
             //Debug.DrawRay(transform.position + clampedPos, normal.normalized,Color.green,3f);
