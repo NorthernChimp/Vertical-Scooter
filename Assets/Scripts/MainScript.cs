@@ -76,6 +76,7 @@ public class MainScript : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        Screen.orientation = ScreenOrientation.Portrait;
         wranglers = new List<FlameWrangler>();
         roundWalls = new List<RoundWall>();
            slowMotionCounter = new Counter(8f); slowMotionCounter.UpdateCounter(8f);
@@ -381,9 +382,9 @@ public class MainScript : MonoBehaviour
         if (Random.value > minAmt)
         {
             playedEnemyLast = true;
-            //float difficultyPoint = currentDifficulty; if (difficultyPoint > 4f) { difficultyPoint = 4f; }
-            float difficultyPoint = (float)basicLevel;
             
+            float difficultyPoint = (float)basicLevel;if (difficultyPoint > 4f) { difficultyPoint = 4f; }
+            //difficultyPoint = 4F;
             
             int randomInt = (int)Random.Range(0f, difficultyPoint);
             //Debug.Log("random int is " + randomInt);
@@ -505,7 +506,8 @@ public class MainScript : MonoBehaviour
             float wallsHeight = Pooter.brickLength * (6f); ;
             nextInstantiationPoint += wallsHeight;
 
-            float difficultyPoint = currentDifficulty + 1f; if (difficultyPoint > 4f) { difficultyPoint = 4f; }
+            float difficultyPoint = currentDifficulty + 1f;
+            if (difficultyPoint > 4f) { difficultyPoint = 4f; }
             if (trainingMode) { difficultyPoint = 1f; }
             int numberOfWalls = (int)Random.Range(2f, difficultyPoint);
             float totalWidth = ((Screen.width * 0.00425f) - Pooter.brickLength) * 2f;
@@ -963,8 +965,6 @@ public class MainScript : MonoBehaviour
                 nextInstantiationPoint = pooter.transform.position.y + (Pooter.brickLength * 6f);
                 lastBrickYpos = nextInstantiationPoint + (Screen.height * 0.0065f);
                 //float swingDist = ((8f + currentDifficulty) * Pooter.brickLength);
-                float difficultyMultiplier = currentDifficulty / 2f;
-                if (difficultyMultiplier > 3f) { difficultyMultiplier = 3f; }
                 //laneWidth = Screen.width * 0.0075f; laneWidth -= (Random.value * Screen.width * 0.00025f)* (3f);
                 laneWidth = Screen.width * 0.0075f; laneWidth -= (Random.value * Screen.width * 0.00125f);
                 //swingDist = Screen.width * (0.001f + (0.00035f * difficultyMultiplier));

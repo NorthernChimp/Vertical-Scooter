@@ -17,14 +17,15 @@ public class Pooter : MonoBehaviour
     public List<SpriteRenderer> renders;
 
     public bool hasInputTouch = false;
+    bool hasTakenDamageThisFrame = false;
 
+    Counter tookDamageCounter;
+    bool flashingRedWhite = false;
     bool vulnerable = true;
 
     bool upwardArrowVisible = false;
     Transform upwardArrow;
     SpriteRenderer upwardArrowRender;
-
-
 
     public static bool pressingJump = false;
     public bool testingOnPC = false;
@@ -124,18 +125,6 @@ public class Pooter : MonoBehaviour
             }
             
         }
-    }
-    void CreateFanOfParticles()
-    {
-        float angleDiff = Mathf.PI / 4f;
-        for (int i = 0; i < 16; i++)
-        {
-            float currentAngleMin = i * angleDiff;
-            float randomVarianceFrom = Random.Range(0f, angleDiff);
-            float currentAngle = currentAngleMin + randomVarianceFrom;
-            Vector3 currentVector = new Vector3(Mathf.Sin(currentAngle), Mathf.Cos(currentAngle), 0f);
-            MainScript.CreateRedDebris(transform.position, currentVector * Pooter.brickLength * 0.420f);
-        }
     } 
     void CreateFanOfGreenParticles()
     {
@@ -153,13 +142,14 @@ public class Pooter : MonoBehaviour
     public void AddSettingsAffector(PooterSettingsAffector aff){settingsAffectors.Add(aff);if (aff.affectType == PooterSettingsAffectorType.invulnerable) { protectiveShielding.enabled = true; vulnerable = false; } }
     public bool DealDamage()//assumes you're dealing 1 damage, returns true if the damage hits
     {
-        if (currentSettings.vulnerable && !MainScript.trainingMode)
+        if (currentSettings.vulnerable && !MainScript.trainingMode && !hasTakenDamageThisFrame)
         {
+            hasTakenDamageThisFrame = true;
+            tookDamageCounter.ResetCounter();
             Camera.main.GetComponent<MainScript>().pooter.regenCounter.ResetCounter();
-            if (currentHealth == 0) { }//the game ends...
             currentHealth--;
+            if (currentHealth == 0) { } else { SetFlashingRed(); }
             ClampHealth();
-            SetFlashingRed();
             return true;
         }
         return false;
@@ -177,16 +167,24 @@ public class Pooter : MonoBehaviour
     }
     void SetFlashingRed()
     {
+        settingsAffectors.Add(new PooterSettingsAffector(PooterSettingsAffectorType.invulnerable, 0.75f));
         flashRedCounter.ResetCounter();
         foreach(SpriteRenderer r in renders)
         {
             r.color = Color.red;
         }
         flashingRed = true;
+        flashingRedWhite = true;
+        renders[0].color = Color.red;
         timesFlashedRed = 0;
+    }
+    void SetupFlashingRed()
+    {
+        tookDamageCounter.ResetCounter();
     }
     public void SetupPooter()
     {
+        tookDamageCounter = new Counter(0.75f);
         impactDebrisCounter = new Counter(0.1f);
         circleCounter = new Counter(1f);
         flashRedCounter = new Counter(2f);
@@ -318,7 +316,27 @@ public class Pooter : MonoBehaviour
     }
     public void UpdatePooter(float timePassed)
     {
+        hasTakenDamageThisFrame = false;
         impactDebrisCounter.UpdateCounter(timePassed);
+        if (flashingRedWhite)
+        {
+            flashRedCounter.UpdateCounter(timePassed);
+            if (flashRedCounter.hasfinished) { flashingRedWhite = false; renders[0].color = Color.white; } else
+            {
+                float percent = flashRedCounter.GetPercentageDone();
+                int remainder = (int)(percent % 0.05f);
+                if (remainder == 1 && flashingRed != false)
+                {
+                    flashingRed = false;
+                    renders[0].color = Color.white;
+                }
+                else if (remainder == 0 && flashingRed != true)
+                {
+                    flashingRed = true;
+                    renders[0].color = Color.red;
+                }
+            }
+        }
         //float effectCounterMultiplier = 1f + (lastMove.magnitude / (brickLength * 0.15f));
         float effectCounterMultiplier = 1f;
         //Debug.Log(lastMove);
